@@ -114,11 +114,13 @@ fn _time() -> u64 {
 fn _calculate_zone(position: Position) -> u64 {
     // Define zone size (how many position units per zone)
     // Using power of 2 for efficient division
-    let zone_size: u64 = 64;
+    let zone_size: u64 = 63;
+    let half_zone: u64 = zone_size / 2;
     
-    // Divide coordinates by zone size to get zone coordinates
-    let x_zone: u64 = position.x / zone_size;
-    let y_zone: u64 = position.y / zone_size;
+    // Add half_zone to center zones around entrance position
+    // This ensures entrance ± half_zone are in the same zone
+    let x_zone: u64 = (position.x + half_zone) / zone_size;
+    let y_zone: u64 = (position.y + half_zone) / zone_size;
     
     // Calculate a unique zone index using bit manipulation
     // This creates a unique number for each (x,y) zone coordinate pair
