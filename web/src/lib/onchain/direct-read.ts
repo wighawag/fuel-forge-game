@@ -31,7 +31,7 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 	}
 
 	async function fetchState(camera: Camera) {
-		const zones = calculateSurroundingZones({ x: (camera.x + 1) << 30, y: (camera.y + 1) << 30 });
+		const zones = calculateSurroundingZones({ x: camera.x + (1 << 30), y: camera.y + (1 << 30) });
 		const result = await gameContract.functions.players_in_zones(zones).get();
 		if (hasCameraChanged($camera, camera)) {
 			return;
@@ -43,7 +43,10 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 				const id = player.account.Address?.bits || player.account.ContractId!.bits;
 				characters[id] = {
 					id,
-					position: { x: player.position.x.toNumber(), y: player.position.y.toNumber() }
+					position: {
+						x: player.position.x.toNumber() - (1 << 30),
+						y: player.position.y.toNumber() - (1 << 30)
+					}
 				};
 			}
 		}
