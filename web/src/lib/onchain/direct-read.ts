@@ -1,5 +1,7 @@
 import { get, writable, type Readable } from 'svelte/store';
 import type { OnchainState } from './types';
+import { gameContract } from '$lib/connection';
+import { calculateSurroundingZones } from 'fuel-forge-game-onchain';
 
 type Camera = {
 	x: number;
@@ -29,13 +31,24 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 	}
 
 	async function fetchState(camera: Camera) {
-		// TODO
-		await fetch('');
+		const zones = calculateSurroundingZones({ x: (camera.x + 1) << 30, y: (camera.y + 1) << 30 });
+		const result = await gameContract.functions.players_in_zones(zones).get();
 		if (hasCameraChanged($camera, camera)) {
 			return;
 		}
-		// TODO
-		set({});
+		const characters: OnchainState = {};
+
+		for (const players of result.value) {
+			for (const player of players) {
+				const id = player.account.Address?.bits || player.account.ContractId!.bits;
+				characters[id] = {
+					id,
+					position: { x: player.position.x.toNumber(), y: player.position.y.toNumber() }
+				};
+			}
+		}
+
+		set(characters);
 	}
 
 	let unsubscribeFromCamera: (() => void) | undefined;

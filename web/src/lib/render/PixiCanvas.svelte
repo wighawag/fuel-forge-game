@@ -3,6 +3,13 @@
 	import { Application, Graphics } from 'pixi.js';
 	import { initDevtools } from '@pixi/devtools';
 	import { onMount } from 'svelte';
+	import type { Writable } from 'svelte/store';
+	import type { Camera } from './camera';
+
+	interface Props {
+		camera: Writable<Camera>;
+	}
+	let { camera }: Props = $props();
 
 	function buildGrid(graphics: Graphics, witdh: number, height: number, cellSize: number) {
 		const numRows = Math.floor(height / cellSize) + 1;
@@ -64,7 +71,7 @@
 				minWidth
 			});
 
-			viewport.fit(true, 20, 20);
+			viewport.fit(true, 7 * cellSize, 7 * cellSize);
 
 			const gridSize = Math.max(maxWidth, maxHeight) + 2 * cellSize;
 
@@ -73,6 +80,7 @@
 				pixelLine: true,
 				width: 1
 			});
+			viewport.moveCenter(0, 0);
 
 			viewport.addChild(gridPixel);
 
@@ -91,6 +99,13 @@
 
 				const offsetX = viewportX / scale;
 				const offsetY = viewportY / scale;
+
+				camera.set({
+					x: viewport.center.x / cellSize,
+					y: viewport.center.y / cellSize,
+					width: viewport.worldScreenWidth / cellSize,
+					height: viewport.worldScreenHeight / cellSize
+				});
 
 				// Get triangle grid spacing information
 				const gridInfo = (gridPixel as any).triangleGridInfo;

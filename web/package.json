@@ -40,6 +40,7 @@
 		"bits-ui": "^2.2.0",
 		"clsx": "^2.1.1",
 		"eip-1193": "^0.6.3",
+		"fuel-forge-game-onchain": "workspace:*",
 		"fuels": "^0.101.3",
 		"pixi-viewport": "^6.0.3",
 		"pixi.js": "^8.9.2",

@@ -4,8 +4,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/esm/index.d.ts",
-      "default": "./dist/esm/index.js"
+      "types": "./dist/esm/lib/index.d.ts",
+      "default": "./dist/esm/lib/index.js"
+    },
+    "./generated": {
+      "types": "./dist/esm/src/index.d.ts",
+      "default": "./dist/esm/src/index.js"
     }
   },
   "files": [
