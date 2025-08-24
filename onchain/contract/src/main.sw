@@ -10,7 +10,11 @@ use std::storage::storage_vec::*;
 // ----------------------------------------------------------------------------
 // EXTERNAL TYPES
 // ----------------------------------------------------------------------------
-
+struct Player {
+    account: Identity,
+    position: Position,
+    life: u64
+}
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -74,7 +78,7 @@ impl PartialEq for Position {
         self.x == other.x && self.y == other.y
     }
 }
-struct Player {
+struct PlayerInStorage {
     position: Position,
     zone_list_index: u64,
     life: u64
@@ -91,7 +95,7 @@ storage {
     // ------------------------------------------------------------------------
     time_delta: u64 = 0,
     // ------------------------------------------------------------------------
-    players: StorageMap<Identity, Player> = StorageMap {},
+    players: StorageMap<Identity, PlayerInStorage> = StorageMap {},
     zones: StorageMap<u64, StorageVec<Identity>> = StorageMap {},
 }
 // ----------------------------------------------------------------------------
@@ -99,7 +103,7 @@ storage {
 // ----------------------------------------------------------------------------
 // CONSTANTS AND CONFIGURABLES
 // ----------------------------------------------------------------------------
-
+const ENTRANCE = Position {x: 1 << 31, y: 1 << 31}; // Start somwhere high enough
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -130,7 +134,7 @@ fn _calculate_zone(position: Position) -> u64 {
 }
 
 #[storage(read)]
-fn _get_player(account: Identity) -> Option<Player> {
+fn _get_player(account: Identity) -> Option<PlayerInStorage> {
     storage.players.get(account).try_read()
 }
 
@@ -183,10 +187,10 @@ impl Game for Contract {
         match _get_player(account) {
             Option::Some(_) => panic GameError::PlayerAlreadyIn,
             Option::None => {
-                let entrance_position = Position {x: 1 << 63, y: 1 << 63}; // Start at the middle of u64 range
+                let entrance_position = ENTRANCE;
                 let entrance_zone = _calculate_zone(entrance_position);
                 let zone_list_index = _add_player_to_zone(account, entrance_zone);
-                let player = Player {
+                let player = PlayerInStorage {
                     position: entrance_position,
                     zone_list_index: zone_list_index,
                     life: 100
@@ -217,7 +221,7 @@ impl Game for Contract {
                 
                 // Update player in storage
                 // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
-                storage.players.insert(account, Player {
+                storage.players.insert(account, PlayerInStorage {
                     position: new_position,
                     zone_list_index: zone_list_index,
                     life: player.life
@@ -249,7 +253,11 @@ impl Game for Contract {
             while counter < length {
                 let account = zone_player_list.get(counter).unwrap().try_read().unwrap();
                 let player = _get_player(account).unwrap();
-                list_of_players.push(player);
+                list_of_players.push(Player {
+                    account: account,
+                    position: player.position,
+                    life: player.life
+                });
                 counter = counter + 1
             }
             list_of_player_list.push(list_of_players);
@@ -266,11 +274,24 @@ impl Game for Contract {
 #[test]
 fn can_move() {
     let caller = abi(Game, CONTRACT_ID);
-    let identity = caller.identity();
+    let account = caller.identity();
     caller.enter();
     let new_position = Position {x: 1, y: 1};
     caller.move(new_position);
-    let current_position = caller.position(identity);
+    let current_position = caller.position(account);
     assert_eq(current_position, Some(new_position));
+}
+
+#[test]
+fn can_get_player_in_zone_after_entering() {
+    let caller = abi(Game, CONTRACT_ID);
+    let account = caller.identity();
+    caller.enter();
+    let mut zones: Vec<u64> = Vec::new();
+    zones.push(_calculate_zone(ENTRANCE));
+    let list_of_player_list = caller.players_in_zones(zones);
+    
+    let player = list_of_player_list.get(0).unwrap().get(0).unwrap();
+    assert_eq(player.account, account);
 }
 // ----------------------------------------------------------------------------
