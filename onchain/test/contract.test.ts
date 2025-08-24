@@ -5,6 +5,9 @@ import { describe, test, expect, assert } from 'vitest';
 import { TestContractFactory } from '../typescript/src/contracts/TestContractFactory';
 import { BN } from 'fuels';
 
+
+const ENTRANCE = { x: 1 << 30, y: 1 << 30};
+
 // TypeScript implementation of _calculate_zone from Sway
 function calculateZone(position: { x: number, y: number }): BN {
   // Define zone size (how many position units per zone)
@@ -68,18 +71,11 @@ describe('Game', () => {
     let {value: identity} = await contract.functions.identity().get();
 
     await contract.functions.enter().call();
+  
+    const expected_zone = calculateZone(ENTRANCE);
     
-    // Define the player's position (entrance position is at {0, 0} by default)
-    const expected_position = { x: 1 << 31, y: 1 << 31};
-    
-    // Calculate the zone using the same logic as the contract
-    const expected_zone = calculateZone(expected_position);
-    
-    
-    let {value: list_of_player_list, callResult} = await contract.functions.players_in_zones([expected_zone]).get();
-    console.log(callResult);
-    console.log(list_of_player_list);
-    expect(list_of_player_list[0][0]).to.equal(identity);
+    let {value: list_of_player_list} = await contract.functions.players_in_zones([expected_zone]).get();
+    expect(list_of_player_list[0][0].account.Address?.bits).to.equal(identity.Address?.bits);
   });
 
 });

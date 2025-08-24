@@ -43,7 +43,12 @@ abi Game {
     // TODO remove, used for testing only
     // ------------------------------------------------------------------------
     fn identity() -> Identity;
+    fn calculate_zone(position: Position) -> u64;
+    // ------------------------------------------------------------------------
 
+    // ------------------------------------------------------------------------
+    // TODO ADMIN
+    // ------------------------------------------------------------------------
     #[storage(write, read)]
     fn increase_time(seconds: u64);
 
@@ -103,7 +108,7 @@ storage {
 // ----------------------------------------------------------------------------
 // CONSTANTS AND CONFIGURABLES
 // ----------------------------------------------------------------------------
-const ENTRANCE = Position {x: 1 << 31, y: 1 << 31}; // Start somwhere high enough
+const ENTRANCE = Position {x: 1 << 30, y: 1 << 30}; // Start somwhere high enough
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -169,6 +174,11 @@ impl Game for Contract {
     fn identity() -> Identity {
         msg_sender().unwrap()
     }
+
+    fn calculate_zone(position: Position) -> u64 {
+        _calculate_zone(position)
+    }
+
     #[storage(write, read)]
     fn increase_time(seconds: u64) {
         let mut time_delta = storage.time_delta.try_read().unwrap_or(0);
