@@ -53,7 +53,10 @@ abi Game {
     fn move(new_position: Position);
 
     #[storage(read)]
-    fn position(identity: Identity) -> u64;
+    fn position(identity: Identity) -> Option<Position>;
+
+    #[storage(read)]
+    fn players_in_zones(zones: Vec<u64>) -> Vec<Vec<Player>>;
 }
 // ----------------------------------------------------------------------------
 
@@ -77,9 +80,6 @@ struct Player {
     life: u64
 }
 
-struct Zone {
-    players: StorageVec<Identity>
-}
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -92,7 +92,7 @@ storage {
     time_delta: u64 = 0,
     // ------------------------------------------------------------------------
     players: StorageMap<Identity, Player> = StorageMap {},
-    zones: StorageMap<u64, Zone> = StorageMap {},
+    zones: StorageMap<u64, StorageVec<Identity>> = StorageMap {},
 }
 // ----------------------------------------------------------------------------
 
@@ -111,7 +111,7 @@ fn _time() -> u64 {
     Time::now().as_tai64() - TAI_64_CONVERTER  + storage.time_delta.try_read().unwrap_or(0)
 }
 
-fn _calculate_zone_index(position: Position) -> u64 {
+fn _calculate_zone(position: Position) -> u64 {
     // Define zone size (how many position units per zone)
     // Using power of 2 for efficient division
     let zone_size: u64 = 64;
@@ -130,6 +130,26 @@ fn _calculate_zone_index(position: Position) -> u64 {
 #[storage(read)]
 fn _get_player(account: Identity) -> Option<Player> {
     storage.players.get(account).try_read()
+}
+
+#[storage(read, write)]
+fn _add_player_to_zone(account: Identity, new_zone: u64) -> u64 {
+    let index = storage.zones.get(new_zone).len();
+    storage.zones.get(new_zone).push(account);
+    index
+}
+#[storage(read, write)]
+fn _remove_player_from_zone(account: Identity, old_zone: u64, old_index: u64) {
+    let length = storage.zones.get(old_zone).len();
+    if old_index == length -1 {
+        storage.zones.get(old_zone).pop();
+    } else {
+        let account_at_the_end = storage.zones.get(old_zone).pop().unwrap();
+        let mut player_at_the_end = storage.players.get(account_at_the_end).try_read().unwrap();
+        player_at_the_end.zone_list_index = old_index;
+        storage.players.insert(account_at_the_end, player_at_the_end);
+        storage.zones.get(old_zone).insert(old_index, account_at_the_end);    
+    }
 }
 // ----------------------------------------------------------------------------
 
@@ -161,10 +181,12 @@ impl Game for Contract {
         match _get_player(account) {
             Option::Some(player) => panic GameError::PlayerAlreadyIn,
             Option::None => {
-
+                let entrance_position = Position {x: 1 << 63, y: 1 << 63}; // Start at the middle of u64 range
+                let entrance_zone = _calculate_zone(entrance_position);
+                let zone_list_index = _add_player_to_zone(account, entrance_zone);
                 let player = Player {
-                    position: Position {x: 1 << 63, y: 1 << 63}, // Start at the middle of u64 range
-                    zone_list_index: 0, // TODO this should be the current length of the StorageVec
+                    position: entrance_position,
+                    zone_list_index: zone_list_index,
                     life: 100
                 };
                 storage.players.insert(account, player);
@@ -183,18 +205,20 @@ impl Game for Contract {
             Option::Some(player) => {
                 // TODO check if movement is possible
 
-                let old_zone_index = _calculate_zone_index(player.position);
-                let new_zone_index = _calculate_zone_index(new_position);
+                let old_zone = _calculate_zone(player.position);
+                let new_zone = _calculate_zone(new_position);
 
-                if old_zone_index != new_zone_index {
-                    // TODO: Update zone membership (remove from old zone, add to new zone)
+                let mut zone_list_index = player.zone_list_index;
+                if old_zone != new_zone {
+                    _remove_player_from_zone(account, old_zone, zone_list_index);
+                    zone_list_index = _add_player_to_zone(account, new_zone);
                 }
                 
                 // Update player in storage
                 // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
                 storage.players.insert(account, Player {
                     position: new_position,
-                    zone_list_index: new_zone_index,
+                    zone_list_index: zone_list_index,
                     life: player.life
                 });
 
@@ -206,8 +230,20 @@ impl Game for Contract {
     }
 
     #[storage(read)]
-    fn position(identity: Identity) -> u64 {
-        0
+    fn position(identity: Identity) -> Option<Position> {
+        match _get_player(identity) {
+            Option::Some(player) => Option::Some(player.position),
+            Option::None => Option::None,
+        }
+    }
+
+    #[storage(read)]
+    fn players_in_zones(zones: Vec<u64>) -> Vec<Vec<Player>> {
+        let mut list_of_player_list: Vec<Vec<Player>> = Vec::new();
+        for zone in zones.iter() {
+            let list_of_players: Vec<Player> = Vec::new();
+        }
+        list_of_player_list
     }
 }
 // ----------------------------------------------------------------------------
