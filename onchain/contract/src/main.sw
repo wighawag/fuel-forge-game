@@ -24,7 +24,10 @@ use std::storage::storage_vec::*;
 // ----------------------------------------------------------------------------
 #[error_type]
 pub enum GameError {
-
+    #[error(m = "Player already in")]
+    PlayerAlreadyIn: (),
+    #[error(m = "Player not in")]
+    PlayerNotIn: (),
 }
 // ----------------------------------------------------------------------------
 
@@ -43,6 +46,9 @@ abi Game {
     #[storage(read)]
     fn get_time() -> u64;
     // ------------------------------------------------------------------------
+    #[storage(write, read)]
+    fn enter();
+
     #[storage(write, read)]
     fn move(new_position: Position);
 
@@ -67,6 +73,7 @@ impl PartialEq for Position {
 }
 struct Player {
     position: Position,
+    zone_list_index: u64,
     life: u64
 }
 
@@ -121,11 +128,8 @@ fn _calculate_zone_index(position: Position) -> u64 {
 }
 
 #[storage(read)]
-fn _get_player(account: Identity) -> Player {
-    storage.players.get(account).try_read().unwrap_or(Player {
-        position: Position {x: 1 << 63, y: 1 << 63}, // Start at the middle of u64 range
-        life: 100
-    })
+fn _get_player(account: Identity) -> Option<Player> {
+    storage.players.get(account).try_read()
 }
 // ----------------------------------------------------------------------------
 
@@ -151,25 +155,54 @@ impl Game for Contract {
     }
     // ------------------------------------------------------------------------
     #[storage(write, read)]
-    fn move(new_position: Position) {
+    fn enter() {
         let account = msg_sender().unwrap();
-        let mut player = _get_player(account);
 
-        // TODO check if movement is possible
+        match _get_player(account) {
+            Option::Some(player) => panic GameError::PlayerAlreadyIn,
+            Option::None => {
 
-        let old_zone_index = _calculate_zone_index(player.position);
-        let new_zone_index = _calculate_zone_index(new_position);
-
-
-        player.position = new_position;
-        if old_zone_index != new_zone_index {
-            // TODO: Update zone membership (remove from old zone, add to new zone)
+                let player = Player {
+                    position: Position {x: 1 << 63, y: 1 << 63}, // Start at the middle of u64 range
+                    zone_list_index: 0, // TODO this should be the current length of the StorageVec
+                    life: 100
+                };
+                storage.players.insert(account, player);
+                // TODO Event
+            }
         }
         
-        // Update player in storage
-        storage.players.insert(account, player);
+    }
 
-        // TODO Event
+    #[storage(write, read)]
+    fn move(new_position: Position) {
+        let account = msg_sender().unwrap();
+        let account = msg_sender().unwrap();
+
+        match _get_player(account) {
+            Option::Some(player) => {
+                // TODO check if movement is possible
+
+                let old_zone_index = _calculate_zone_index(player.position);
+                let new_zone_index = _calculate_zone_index(new_position);
+
+                if old_zone_index != new_zone_index {
+                    // TODO: Update zone membership (remove from old zone, add to new zone)
+                }
+                
+                // Update player in storage
+                // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
+                storage.players.insert(account, Player {
+                    position: new_position,
+                    zone_list_index: new_zone_index,
+                    life: player.life
+                });
+
+                // TODO Event
+
+            },
+            Option::None => panic GameError::PlayerNotIn,
+        }
     }
 
     #[storage(read)]
