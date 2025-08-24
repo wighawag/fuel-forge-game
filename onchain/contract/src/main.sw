@@ -230,8 +230,8 @@ impl Game for Contract {
     }
 
     #[storage(read)]
-    fn position(identity: Identity) -> Option<Position> {
-        match _get_player(identity) {
+    fn position(account: Identity) -> Option<Position> {
+        match _get_player(account) {
             Option::Some(player) => Option::Some(player.position),
             Option::None => Option::None,
         }
@@ -241,7 +241,17 @@ impl Game for Contract {
     fn players_in_zones(zones: Vec<u64>) -> Vec<Vec<Player>> {
         let mut list_of_player_list: Vec<Vec<Player>> = Vec::new();
         for zone in zones.iter() {
-            let list_of_players: Vec<Player> = Vec::new();
+            let mut list_of_players: Vec<Player> = Vec::new();
+            let zone_player_list = storage.zones.get(zone);
+            let length = zone_player_list.len();
+            let mut counter = 0;
+            while counter < length {
+                let account = zone_player_list.get(counter).unwrap().try_read().unwrap();
+                let player = _get_player(account).unwrap();
+                list_of_players.push(player);
+                counter = counter + 1
+            }
+            list_of_player_list.push(list_of_players);
         }
         list_of_player_list
     }
