@@ -141,10 +141,10 @@ fn _add_player_to_zone(account: Identity, new_zone: u64) -> u64 {
     index
 }
 #[storage(read, write)]
-fn _remove_player_from_zone(account: Identity, old_zone: u64, old_index: u64) {
+fn _remove_player_from_zone(old_zone: u64, old_index: u64) {
     let length = storage.zones.get(old_zone).len();
     if old_index == length -1 {
-        storage.zones.get(old_zone).pop();
+        let _ = storage.zones.get(old_zone).pop();
     } else {
         let account_at_the_end = storage.zones.get(old_zone).pop().unwrap();
         let mut player_at_the_end = storage.players.get(account_at_the_end).try_read().unwrap();
@@ -181,7 +181,7 @@ impl Game for Contract {
         let account = msg_sender().unwrap();
 
         match _get_player(account) {
-            Option::Some(player) => panic GameError::PlayerAlreadyIn,
+            Option::Some(_) => panic GameError::PlayerAlreadyIn,
             Option::None => {
                 let entrance_position = Position {x: 1 << 63, y: 1 << 63}; // Start at the middle of u64 range
                 let entrance_zone = _calculate_zone(entrance_position);
@@ -201,7 +201,6 @@ impl Game for Contract {
     #[storage(write, read)]
     fn move(new_position: Position) {
         let account = msg_sender().unwrap();
-        let account = msg_sender().unwrap();
 
         match _get_player(account) {
             Option::Some(player) => {
@@ -212,7 +211,7 @@ impl Game for Contract {
 
                 let mut zone_list_index = player.zone_list_index;
                 if old_zone != new_zone {
-                    _remove_player_from_zone(account, old_zone, zone_list_index);
+                    _remove_player_from_zone(old_zone, zone_list_index);
                     zone_list_index = _add_player_to_zone(account, new_zone);
                 }
                 
@@ -266,6 +265,12 @@ impl Game for Contract {
 // ----------------------------------------------------------------------------
 #[test]
 fn can_move() {
-   
+    let caller = abi(Game, CONTRACT_ID);
+    let identity = caller.identity();
+    caller.enter();
+    let new_position = Position {x: 1, y: 1};
+    caller.move(new_position);
+    let current_position = caller.position(identity);
+    assert_eq(current_position, Some(new_position));
 }
 // ----------------------------------------------------------------------------
