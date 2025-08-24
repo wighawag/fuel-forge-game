@@ -159,7 +159,7 @@ fn _remove_player_from_zone(old_zone: u64, old_index: u64) {
         let mut player_at_the_end = storage.players.get(account_at_the_end).try_read().unwrap();
         player_at_the_end.zone_list_index = old_index;
         storage.players.insert(account_at_the_end, player_at_the_end);
-        storage.zones.get(old_zone).insert(old_index, account_at_the_end);    
+        storage.zones.get(old_zone).set(old_index, account_at_the_end);    
     }
 }
 // ----------------------------------------------------------------------------
