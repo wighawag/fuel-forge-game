@@ -1,0 +1,19 @@
+[[package]]
+name = "std"
+version = "0.69.1"
+source = "registry+std?0.69.1#QmbPunScay4xpfHKpxQ71dFKXSiyJuPP8P8YhgX5Dkmzm9!"
+
+[[package]]
+name = "test-contract"
+source = "member"
+dependencies = ["std"]
+
+[[package]]
+name = "test-predicate"
+source = "member"
+dependencies = ["std"]
+
+[[package]]
+name = "test-script"
+source = "member"
+dependencies = ["std"]

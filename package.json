@@ -1,0 +1,36 @@
+{
+  "name": "fuel-forge-game",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.10.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "ldenv": "^0.3.12",
+    "set-defaults": "^0.0.5",
+    "syncpack": "^13.0.4",
+    "zellij-launcher": "^0.0.1"
+  },
+  "scripts": {
+    "prepare": "set-defaults .vscode",
+    "preinstall": "npx only-allow pnpm",
+    "---------------------- INSTALL ----------------------": "",
+    "sync-deps": "syncpack fix-mismatches",
+    "---------------------- DEV ----------------------": "",
+    "web:dev": "ldenv pnpm --filter ./web dev",
+    "web:build": "ldenv pnpm --filter ./web build",
+    "onchain:dev": "killall fuel-core; ldenv pnpm --filter ./onchain dev",
+    "onchain:contracts:dev": "ldenv pnpm --filter ./onchain contracts:dev",
+    "---------------------- BUILD ----------------------": "",
+    "build": "pnpm build",
+    "serve": "pnpm run --filter ./web serve",
+    "---------------------- RUN FULL LOCAL SETUP ----------------------": "",
+    "stop": "zellij kill-session $npm_package_name",
+    "start:pnpm": "pnpm -r dev",
+    "start": "zellij-launcher a $npm_package_name || zellij -n zellij.kdl -s $npm_package_name"
+  }
+}

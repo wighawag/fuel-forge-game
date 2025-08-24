@@ -1,0 +1,6 @@
+dist
+typescript/src
+.fuels
+node_modules
+out
+target

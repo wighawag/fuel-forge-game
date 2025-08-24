@@ -1,0 +1,11 @@
+[project]
+authors = ["Fuel Labs <contact@fuel.sh>"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "test-contract"
+
+[proxy]
+enabled = true
+address = "0xcc229de3217d593524474e8d21881d9118858e665f86dd04d3b63779493724b0"
+
+[dependencies]
