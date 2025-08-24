@@ -1,4 +1,10 @@
 [[package]]
+name = "signed_int"
+version = "0.26.0"
+source = "registry+signed_int?0.26.0#QmdFeAi7tUXPAx8yErTEcVog7Bnkf76aoibmZwR3quePeE!"
+dependencies = ["std"]
+
+[[package]]
 name = "std"
 version = "0.69.1"
 source = "registry+std?0.69.1#QmbPunScay4xpfHKpxQ71dFKXSiyJuPP8P8YhgX5Dkmzm9!"
@@ -6,7 +12,10 @@ source = "registry+std?0.69.1#QmbPunScay4xpfHKpxQ71dFKXSiyJuPP8P8YhgX5Dkmzm9!"
 [[package]]
 name = "test-contract"
 source = "member"
-dependencies = ["std"]
+dependencies = [
+    "signed_int",
+    "std",
+]
 
 [[package]]
 name = "test-predicate"

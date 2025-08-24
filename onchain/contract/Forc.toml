@@ -9,3 +9,4 @@ enabled = true
 address = "0x40d4dd56a9f06c50eb0b622eacc7e1b32ccc34a40407075d1c1b4be2094f931b"
 
 [dependencies]
+signed_int = "0.26.0"
