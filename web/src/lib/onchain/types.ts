@@ -1,12 +1,24 @@
 import type { Readable } from 'svelte/store';
 
-export type Entity = {
-	id: string;
-	position: { x: number; y: number };
-	type: 'player' | 'bomb';
-};
+export type Entity = { id: string; position: { x: number; y: number } } & (
+	| {
+			type: 'player';
+			life: number;
+	  }
+	| {
+			type: 'bomb';
+			explosion_start: number;
+			explosion_end: number;
+	  }
+);
 export type OnchainState = {
-	[id: string]: Entity;
+	time: {
+		lastBlockTime: number;
+		value: number;
+		fetchStart: number;
+		fetchReceived: number;
+	};
+	entities: { [id: string]: Entity };
 };
 
 export type OnChainLayer = Readable<OnchainState>;

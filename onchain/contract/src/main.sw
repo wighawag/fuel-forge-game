@@ -30,6 +30,11 @@ enum Entity {
     Player: Player,
     Bomb: Bomb,
 }
+
+struct ZonesInfo {
+    time: u64,
+    zones:  Vec<Vec<Entity>>,
+}
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -87,7 +92,7 @@ abi Game {
     fn position(identity: Identity) -> Option<Position>;
 
     #[storage(read)]
-    fn entities_in_zones(zones: Vec<u64>) -> Vec<Vec<Entity>>;
+    fn get_zones(zones: Vec<u64>) -> ZonesInfo;
 }
 // ----------------------------------------------------------------------------
 
@@ -414,7 +419,8 @@ impl Game for Contract {
     }
 
     #[storage(read)]
-    fn entities_in_zones(zones: Vec<u64>) -> Vec<Vec<Entity>> {
+    fn get_zones(zones: Vec<u64>) -> ZonesInfo {
+        let time = _time();
         let mut list_of_entity_list: Vec<Vec<Entity>> = Vec::new();
         for zone in zones.iter() {
             let mut list_of_entities: Vec<Entity> = Vec::new();
@@ -449,7 +455,10 @@ impl Game for Contract {
             }
             list_of_entity_list.push(list_of_entities);
         }
-        list_of_entity_list
+        ZonesInfo {
+            time: time,
+            zones: list_of_entity_list,
+        }
     }
 }
 // ----------------------------------------------------------------------------
@@ -476,7 +485,7 @@ fn can_get_player_in_zone_after_entering() {
     caller.enter();
     let mut zones: Vec<u64> = Vec::new();
     zones.push(_calculate_zone(ENTRANCE));
-    let list_of_player_list = caller.entities_in_zones(zones);
+    let list_of_player_list = caller.get_zones(zones).zones;
     
     match list_of_player_list.get(0).unwrap().get(0).unwrap() {
         Entity::Player(player) => assert_eq(player.account, account),
@@ -494,7 +503,7 @@ fn can_get_player_in_zone_after_moving() {
 
     let mut zones: Vec<u64> = Vec::new();
     zones.push(_calculate_zone(ENTRANCE));
-    let list_of_player_list = caller.entities_in_zones(zones);
+    let list_of_player_list = caller.get_zones(zones).zones;
     
     match list_of_player_list.get(0).unwrap().get(0).unwrap() {
         Entity::Player(player) => assert_eq(player.account, account),

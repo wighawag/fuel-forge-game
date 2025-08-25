@@ -2,6 +2,7 @@
 	import { requestFundFromFaucet, wallet } from '$lib/connection/index.js';
 	import { writes } from '$lib/onchain/writes';
 	import ImgBlockie from '$lib/ui/ethereum/ImgBlockie.svelte';
+	import { viewState } from '$lib/view';
 
 	async function enter() {
 		await writes.enter();
@@ -19,6 +20,7 @@
 	<div class="flex h-full items-center space-x-2">
 		<!-- Logo or App Name -->
 		<button onclick={faucet} class="text-lg font-bold">{wallet.address.toAddress()}</button>
+		<span>{new Date($viewState.time.value * 1000)}</span>
 	</div>
 	<div class="relative flex h-full items-center space-x-4">
 		<div class="flex h-full items-center space-x-2">

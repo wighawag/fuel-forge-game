@@ -51,8 +51,8 @@ describe('Game', () => {
   
     const expected_zone = calculateZone(ENTRANCE);
     
-    let {value: list_of_player_list} = await contract.functions.entities_in_zones([expected_zone]).get();
-    expect(list_of_player_list[0][0].Player!.account.Address?.bits).to.equal(identity.Address?.bits);
+    let {value: zonesInfo} = await contract.functions.get_zones([expected_zone]).get();
+    expect(zonesInfo.zones[0][0].Player!.account.Address?.bits).to.equal(identity.Address?.bits);
   });
 
 
@@ -80,9 +80,9 @@ describe('Game', () => {
       await contract.functions.enter().call();
     }
 
-     let {value: initial_list_of_player_list} = await contract.functions.entities_in_zones([calculateZone(ENTRANCE)]).get();
+    //  let {value: zonesInfo} = await contract.functions.get_zones([calculateZone(ENTRANCE)]).get();
 
-    console.log(JSON.stringify(initial_list_of_player_list, null, 2));
+    // console.log(JSON.stringify(zonesInfo.zones, null, 2));
 
     // move first account so it is in a different zone
     contract.account = wallets[0];
@@ -94,13 +94,13 @@ describe('Game', () => {
 
     
     
-    let {value: list_of_player_list} = await contract.functions.entities_in_zones(zones).get();
+    let {value: zonesInfo} = await contract.functions.get_zones(zones).get();
 
-    console.log(JSON.stringify(list_of_player_list, null, 2));
+    // console.log(JSON.stringify(zonesInfo.zones, null, 2));
 
-    expect(list_of_player_list[0][0].Player!.account.Address?.bits).to.equal(wallets[2].address.toAddress());
-    expect(list_of_player_list[0][1].Player!.account.Address?.bits).to.equal(wallets[1].address.toAddress());
-    expect(list_of_player_list[3][0].Player!.account.Address?.bits).to.equal(wallets[0].address.toAddress());
+    expect(zonesInfo.zones[0][0].Player!.account.Address?.bits).to.equal(wallets[2].address.toAddress());
+    expect(zonesInfo.zones[0][1].Player!.account.Address?.bits).to.equal(wallets[1].address.toAddress());
+    expect(zonesInfo.zones[3][0].Player!.account.Address?.bits).to.equal(wallets[0].address.toAddress());
   });
 
 });

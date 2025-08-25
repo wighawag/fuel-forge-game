@@ -1,6 +1,7 @@
 import { Provider, ScriptTransactionRequest, Wallet, type AccountCoinQuantity } from 'fuels';
 import { PUBLIC_FUEL_NODE_URL } from '$env/static/public';
 import { TestContract } from 'fuel-forge-game-onchain/generated';
+import { writable } from 'svelte/store';
 
 export const provider = new Provider(PUBLIC_FUEL_NODE_URL);
 
@@ -14,7 +15,7 @@ export const wallet = Wallet.fromPrivateKey(privateKey);
 wallet.connect(provider);
 
 export const gameContract = new TestContract(
-	'0x778a2e2630121118c23c609788741d9901853ceb2ba53860ba08670518d2c81d',
+	'0x9611421031a3193b2a90ab6de35300addd309ac0a1aaf89a66bee1d976983364',
 	wallet
 );
 
@@ -50,3 +51,53 @@ export async function requestFundFromFaucet() {
 	const submit = await faucetWallet.sendTransaction(assembledRequest);
 	await submit.waitForResult();
 }
+
+function convertTaiTime(num: string) {
+	return Number(BigInt(num) - BigInt(Math.pow(2, 62)) - BigInt(10));
+}
+export function createTime() {
+	let last_time = Math.floor(Date.now() / 1000);
+	let last_fetch_time = performance.now();
+	const time = writable(last_time, start);
+
+	function start() {
+		let interval = setInterval(() => {
+			const now = performance.now();
+			const timePassed = now - last_fetch_time;
+			time.set(last_time + timePassed / 1000);
+		}, 1000);
+
+		(async () => {
+			const before_fetch = performance.now();
+			const block = await provider.getBlock('latest');
+			const lastBlockTime = Number(convertTaiTime(block!.time));
+			const after_fetch = performance.now();
+			const predicted_fetch_time = (before_fetch + after_fetch) / 2;
+			updateTime(lastBlockTime, predicted_fetch_time);
+		})();
+
+		return () => clearInterval(interval);
+	}
+
+	function updateTime(newTime: number, fetchTime: number) {
+		last_time = newTime;
+		last_fetch_time = fetchTime;
+		const now = performance.now();
+		const timePassed = now - last_fetch_time;
+		time.set(last_time + timePassed / 1000);
+	}
+
+	function now() {
+		const now = performance.now();
+		const timePassed = now - last_fetch_time;
+		return last_time + timePassed / 1000;
+	}
+
+	return {
+		now,
+		updateTime,
+		subscribe: time.subscribe
+	};
+}
+
+export const time = createTime();
