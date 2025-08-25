@@ -10,10 +10,25 @@ use std::storage::storage_vec::*;
 // ----------------------------------------------------------------------------
 // EXTERNAL TYPES
 // ----------------------------------------------------------------------------
+
 struct Player {
     account: Identity,
     position: Position,
-    life: u64
+    time: u64,
+    life: u64,
+    next_bomb: u64
+}
+
+struct Bomb {
+    position: Position,
+    length: u64,
+    start: u64,
+    end: u64
+}
+
+enum Entity {
+    Player: Player,
+    Bomb: Bomb,
 }
 // ----------------------------------------------------------------------------
 
@@ -32,6 +47,8 @@ pub enum GameError {
     PlayerAlreadyIn: (),
     #[error(m = "Player not in")]
     PlayerNotIn: (),
+    #[error(m = "Bomb Already there")]
+    BombAlreadyThere: (),
 }
 // ----------------------------------------------------------------------------
 
@@ -61,11 +78,14 @@ abi Game {
     #[storage(write, read)]
     fn move(new_position: Position);
 
+    #[storage(write, read)]
+    fn place_bomb();
+
     #[storage(read)]
     fn position(identity: Identity) -> Option<Position>;
 
     #[storage(read)]
-    fn players_in_zones(zones: Vec<u64>) -> Vec<Vec<Player>>;
+    fn entities_in_zones(zones: Vec<u64>) -> Vec<Vec<Entity>>;
 }
 // ----------------------------------------------------------------------------
 
@@ -78,6 +98,14 @@ struct Position {
     y: u64
 }
 
+impl Hash for Position {
+    fn hash(self, ref mut hasher: Hasher) {
+        self.x.hash(hasher);
+        self.y.hash(hasher);
+    }
+}
+
+
 impl PartialEq for Position {
     fn eq(self, other: Self) -> bool {
         self.x == other.x && self.y == other.y
@@ -85,8 +113,16 @@ impl PartialEq for Position {
 }
 struct PlayerInStorage {
     position: Position,
+    time: u64,
     zone_list_index: u64,
-    life: u64
+    life: u64,
+    next_bomb: u64
+}
+
+struct TileInStorage {
+    is_bomb_tile: bool,
+    explosion_start: u64,
+    explosion_end: u64
 }
 
 // ----------------------------------------------------------------------------
@@ -102,6 +138,7 @@ storage {
     // ------------------------------------------------------------------------
     players: StorageMap<Identity, PlayerInStorage> = StorageMap {},
     zones: StorageMap<u64, StorageVec<Identity>> = StorageMap {},
+    tiles: StorageMap<Position, TileInStorage> = StorageMap {},
 }
 // ----------------------------------------------------------------------------
 
@@ -141,6 +178,11 @@ fn _calculate_zone(position: Position) -> u64 {
 #[storage(read)]
 fn _get_player(account: Identity) -> Option<PlayerInStorage> {
     storage.players.get(account).try_read()
+}
+
+#[storage(read)]
+fn _get_tile(position: Position) -> Option<TileInStorage> {
+    storage.tiles.get(position).try_read()
 }
 
 #[storage(read, write)]
@@ -198,6 +240,7 @@ impl Game for Contract {
     #[storage(write, read)]
     fn enter() {
         let account = msg_sender().unwrap();
+        let time = _time();
 
         match _get_player(account) {
             Option::Some(_) => panic GameError::PlayerAlreadyIn,
@@ -207,7 +250,9 @@ impl Game for Contract {
                 let zone_list_index = _add_player_to_zone(account, entrance_zone);
                 let player = PlayerInStorage {
                     position: entrance_position,
+                    time: time,
                     zone_list_index: zone_list_index,
+                    next_bomb: 0,
                     life: 100
                 };
                 storage.players.insert(account, player);
@@ -220,6 +265,7 @@ impl Game for Contract {
     #[storage(write, read)]
     fn move(new_position: Position) {
         let account = msg_sender().unwrap();
+        let time = _time();
 
         match _get_player(account) {
             Option::Some(player) => {
@@ -238,11 +284,38 @@ impl Game for Contract {
                 // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
                 storage.players.insert(account, PlayerInStorage {
                     position: new_position,
+                    time: time,
                     zone_list_index: zone_list_index,
-                    life: player.life
+                    life: player.life,
+                    next_bomb: player.next_bomb
                 });
 
                 // TODO Event
+
+            },
+            Option::None => panic GameError::PlayerNotIn,
+        }
+    }
+
+
+     #[storage(write, read)]
+    fn place_bomb() {
+        let account = msg_sender().unwrap();
+        let time = _time();
+        match _get_player(account) {
+            Option::Some(player) => {
+                match _get_tile(player.position) {
+                    Option::Some(tile) => {
+                        if tile.is_bomb_tile && tile.explosion_start < time && tile.explosion_end > time {
+                            panic GameError::BombAlreadyThere
+                        } else {
+
+                        }
+                    },
+                    Option::None => {
+
+                    },
+                }
 
             },
             Option::None => panic GameError::PlayerNotIn,
@@ -258,26 +331,28 @@ impl Game for Contract {
     }
 
     #[storage(read)]
-    fn players_in_zones(zones: Vec<u64>) -> Vec<Vec<Player>> {
-        let mut list_of_player_list: Vec<Vec<Player>> = Vec::new();
+    fn entities_in_zones(zones: Vec<u64>) -> Vec<Vec<Entity>> {
+        let mut list_of_entity_list: Vec<Vec<Entity>> = Vec::new();
         for zone in zones.iter() {
-            let mut list_of_players: Vec<Player> = Vec::new();
-            let zone_player_list = storage.zones.get(zone);
-            let length = zone_player_list.len();
+            let mut list_of_entities: Vec<Entity> = Vec::new();
+            let zone_entity_list = storage.zones.get(zone);
+            let length = zone_entity_list.len();
             let mut counter = 0;
             while counter < length {
-                let account = zone_player_list.get(counter).unwrap().try_read().unwrap();
+                let account = zone_entity_list.get(counter).unwrap().try_read().unwrap();
                 let player = _get_player(account).unwrap();
-                list_of_players.push(Player {
+                list_of_entities.push(Entity::Player(Player {
                     account: account,
                     position: player.position,
-                    life: player.life
-                });
+                    life: player.life,
+                    time: player.time,
+                    next_bomb: player.next_bomb
+                }));
                 counter = counter + 1
             }
-            list_of_player_list.push(list_of_players);
+            list_of_entity_list.push(list_of_entities);
         }
-        list_of_player_list
+        list_of_entity_list
     }
 }
 // ----------------------------------------------------------------------------
@@ -304,10 +379,13 @@ fn can_get_player_in_zone_after_entering() {
     caller.enter();
     let mut zones: Vec<u64> = Vec::new();
     zones.push(_calculate_zone(ENTRANCE));
-    let list_of_player_list = caller.players_in_zones(zones);
+    let list_of_player_list = caller.entities_in_zones(zones);
     
-    let player = list_of_player_list.get(0).unwrap().get(0).unwrap();
-    assert_eq(player.account, account);
+    match list_of_player_list.get(0).unwrap().get(0).unwrap() {
+        Entity::Player(player) => assert_eq(player.account, account),
+        Entity::Bomb(bomb) => assert_eq(false, true),
+    }
+    
 }
 
 #[test]
@@ -319,9 +397,11 @@ fn can_get_player_in_zone_after_moving() {
 
     let mut zones: Vec<u64> = Vec::new();
     zones.push(_calculate_zone(ENTRANCE));
-    let list_of_player_list = caller.players_in_zones(zones);
+    let list_of_player_list = caller.entities_in_zones(zones);
     
-    let player = list_of_player_list.get(0).unwrap().get(0).unwrap();
-    assert_eq(player.account, account);
+    match list_of_player_list.get(0).unwrap().get(0).unwrap() {
+        Entity::Player(player) => assert_eq(player.account, account),
+        Entity::Bomb(bomb) => assert_eq(false, true),
+    }
 }
 // ----------------------------------------------------------------------------

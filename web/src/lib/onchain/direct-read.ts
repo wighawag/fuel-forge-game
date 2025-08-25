@@ -35,26 +35,29 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 			x: Math.floor(camera.x) + (1 << 30),
 			y: Math.floor(camera.y) + (1 << 30)
 		});
-		const result = await gameContract.functions.players_in_zones(zones).get();
+		const result = await gameContract.functions.entities_in_zones(zones).get();
 		if (hasCameraChanged($camera, camera)) {
 			return;
 		}
-		const characters: OnchainState = {};
+		const entities: OnchainState = {};
 
-		for (const players of result.value) {
-			for (const player of players) {
-				const id = player.account.Address?.bits || player.account.ContractId!.bits;
-				characters[id] = {
-					id,
-					position: {
-						x: player.position.x.toNumber() - (1 << 30),
-						y: player.position.y.toNumber() - (1 << 30)
-					}
-				};
+		for (const entitiesFetched of result.value) {
+			for (const entity of entitiesFetched) {
+				const player = entity.Player;
+				if (player) {
+					const id = player.account.Address?.bits || player.account.ContractId!.bits;
+					entities[id] = {
+						id,
+						position: {
+							x: player.position.x.toNumber() - (1 << 30),
+							y: player.position.y.toNumber() - (1 << 30)
+						}
+					};
+				}
 			}
 		}
 
-		set(characters);
+		set(entities);
 	}
 
 	let unsubscribeFromCamera: (() => void) | undefined;
