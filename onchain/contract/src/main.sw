@@ -49,6 +49,8 @@ pub enum GameError {
     PlayerNotIn: (),
     #[error(m = "Bomb Already there")]
     BombAlreadyThere: (),
+    #[error(m = "Player is dead")]
+    PlayerIsDead: (),
 }
 // ----------------------------------------------------------------------------
 
@@ -204,6 +206,27 @@ fn _remove_player_from_zone(old_zone: u64, old_index: u64) {
         storage.zones.get(old_zone).set(old_index, account_at_the_end);    
     }
 }
+
+
+#[storage(read, write)]
+fn _update_player_for_explosion(player: PlayerInStorage, time: u64) -> PlayerInStorage {
+    let mut updated_player = PlayerInStorage {
+        position: player.position,
+        time: player.time,
+        zone_list_index: player.zone_list_index,
+        life: player.life,
+        next_bomb: player.next_bomb
+    };
+    match _get_tile(player.position) {
+        Option::Some(tile) => {
+            if tile.explosion_start < time && tile.explosion_end > player.time {
+                updated_player.life = player.life -1
+            }
+        },
+        Option::None => {},
+    }
+    updated_player
+}
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -268,8 +291,24 @@ impl Game for Contract {
         let time = _time();
 
         match _get_player(account) {
-            Option::Some(player) => {
-                // TODO check if movement is possible
+            Option::Some(p) => {
+
+                let player = _update_player_for_explosion(p, time);
+                if player.life  == 0 {
+                    panic GameError::PlayerIsDead;
+                }
+
+                
+                match _get_tile(new_position) {
+                    Option::Some(tile) => {
+                        if tile.is_bomb_tile && tile.explosion_end > time {
+                            panic GameError::BombAlreadyThere
+                        } else {
+
+                        }
+                    },
+                    Option::None => {},
+                }
 
                 let old_zone = _calculate_zone(player.position);
                 let new_zone = _calculate_zone(new_position);
@@ -303,10 +342,16 @@ impl Game for Contract {
         let account = msg_sender().unwrap();
         let time = _time();
         match _get_player(account) {
-            Option::Some(player) => {
+            Option::Some(p) => {
+
+                let player = _update_player_for_explosion(p, time);
+                if player.life  == 0 {
+                    panic GameError::PlayerIsDead;
+                }
+
                 match _get_tile(player.position) {
                     Option::Some(tile) => {
-                        if tile.is_bomb_tile && tile.explosion_start < time && tile.explosion_end > time {
+                        if tile.is_bomb_tile && tile.explosion_end > time {
                             panic GameError::BombAlreadyThere
                         } else {
 
@@ -316,6 +361,9 @@ impl Game for Contract {
 
                     },
                 }
+
+
+                // TODO
 
             },
             Option::None => panic GameError::PlayerNotIn,

@@ -26,8 +26,10 @@
   },
   "scripts": {
     "dev": "node delete_proxy_address.js && fuels dev",
-    "contracts:dev": "as-soon -w contract/src pnpm build",
+    "fuel-core": "node delete_proxy_address.js && fuels node",
+    "contracts:dev": "as-soon -w contract/src pnpm build:deploy",
     "test": "as-soon -w contract/src forc test",
+    "build:deploy": "fuels build && pnpm typescript && fuels deploy",
     "build": "fuels build && pnpm typescript",
     "typescript": "node fix-imports.js && tsc --project typescript/tsconfig.json"
   }

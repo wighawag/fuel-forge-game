@@ -24,6 +24,7 @@
     "web:dev": "ldenv pnpm --filter ./web dev",
     "web:build": "ldenv pnpm --filter ./web build",
     "onchain:dev": "killall fuel-core; ldenv pnpm --filter ./onchain dev",
+    "onchain:node": "killall fuel-core; ldenv pnpm --filter ./onchain fuel-core",
     "onchain:test": "ldenv pnpm --filter ./onchain test",
     "onchain:contracts:dev": "ldenv pnpm --filter ./onchain contracts:dev",
     "---------------------- BUILD ----------------------": "",

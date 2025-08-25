@@ -10,7 +10,7 @@ layout {
 
 	pane split_direction="vertical" {
         pane name="onchain" command="pnpm"  {
-			args "onchain:dev"
+			args "onchain:node"
 		}
 		pane name="onchain" command="pnpm"  {
 			args "onchain:contracts:dev"
