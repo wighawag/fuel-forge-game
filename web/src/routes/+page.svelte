@@ -2,6 +2,7 @@
 	import TopBar from '$lib/ui/structure/TopBar.svelte';
 	import PixiCanvas from '$lib/render/PixiCanvas.svelte';
 	import { camera } from '$lib/render/camera';
+	import { renderer } from '$lib/render/renderer';
 
 	// TODO:
 	import { viewState } from '$lib/view';
@@ -14,7 +15,7 @@
 </main>
 
 <div class="canvas">
-	<PixiCanvas {camera} />
+	<PixiCanvas {camera} {renderer} />
 </div>
 
 <style>

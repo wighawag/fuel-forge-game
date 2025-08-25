@@ -6,11 +6,14 @@
 	import { get, type Writable } from 'svelte/store';
 	import type { Camera } from './camera';
 	import { viewState } from '$lib/view';
+	import type { OnchainState } from '$lib/onchain/types';
+	import type { Renderer } from './renderer';
 
 	interface Props {
 		camera: Writable<Camera>;
+		renderer: Renderer;
 	}
-	let { camera }: Props = $props();
+	let { camera, renderer }: Props = $props();
 
 	function buildGrid(graphics: Graphics, witdh: number, height: number, cellSize: number) {
 		const numRows = Math.floor(height / cellSize) + 1;
@@ -54,6 +57,8 @@
 			});
 			viewport.moveCenter(0, 0);
 
+			renderer.onAppStarted(viewport);
+
 			// add the viewport to the stage
 			app.stage.addChild(viewport);
 
@@ -84,16 +89,6 @@
 			viewport.moveCenter(0, 0);
 
 			viewport.addChild(gridPixel);
-
-			// TODO + update
-			// need to keep track of what need to be ADDED and REMOVED
-			// ADDED is easy as we can have a dict (characterID => DisplayObject)
-			// REMOVED required to get the list of characterId that was previouly added and a dict of characterID from state
-			const characters = get(viewState);
-			const charactersDisplayObjects = {};
-			for (const key of Object.keys(characters)) {
-				const charactersDisplayObject = {}; // TODO
-			}
 
 			// Listen for animate update
 			app.ticker.add((time) => {
@@ -163,7 +158,11 @@
 				console.log(`unmounting while app was not initialised, waiting for it...`);
 				appInitialising.then(() => {
 					console.log(`destroying Pixi Application...`);
+					// try {
+					renderer.onAppStopped();
+					// } finally {
 					app.destroy();
+					// }
 				});
 			}
 		};
