@@ -1,4 +1,4 @@
-import { Provider, Wallet } from 'fuels';
+import { Provider, ScriptTransactionRequest, Wallet, type AccountCoinQuantity } from 'fuels';
 import { PUBLIC_FUEL_NODE_URL } from '$env/static/public';
 import { TestContract } from 'fuel-forge-game-onchain/generated';
 
@@ -14,6 +14,39 @@ export const wallet = Wallet.fromPrivateKey(privateKey);
 wallet.connect(provider);
 
 export const gameContract = new TestContract(
-	'0x837dcf5e4f69c77b7adc673d5fc505c8420d325af43a2782013e81e3d5376017',
+	'0xa8b7cd7874fb25b86715688f1b36ea62756787ffa1f7c2bda3e075b40192c4cd',
 	wallet
 );
+
+export async function requestFundFromFaucet() {
+	const faucetWallet = Wallet.fromPrivateKey('0x1');
+	faucetWallet.connect(provider);
+
+	const request = new ScriptTransactionRequest();
+
+	const baseAssetId = await provider.getBaseAssetId();
+	const transferAmount = 1000;
+
+	request.addCoinOutput(wallet.address, transferAmount, baseAssetId);
+
+	const accountCoinQuantities: AccountCoinQuantity[] = [
+		{
+			amount: transferAmount,
+			assetId: baseAssetId, // Asset ID
+			account: faucetWallet
+		}
+	];
+
+	// Assemble the transaction
+	const { assembledRequest, gasPrice, receipts } = await provider.assembleTx({
+		request,
+		accountCoinQuantities,
+		feePayerAccount: faucetWallet,
+		blockHorizon: 10,
+		estimatePredicates: true
+	});
+
+	// The assembledRequest is now ready to be signed and sent
+	const submit = await faucetWallet.sendTransaction(assembledRequest);
+	await submit.waitForResult();
+}

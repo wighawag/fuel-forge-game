@@ -1,10 +1,15 @@
 <script lang="ts">
-	import { wallet } from '$lib/connection/index.js';
+	import { requestFundFromFaucet, wallet } from '$lib/connection/index.js';
 	import { writes } from '$lib/onchain/writes';
 	import ImgBlockie from '$lib/ui/ethereum/ImgBlockie.svelte';
 
-	async function onclick() {
+	async function enter() {
 		await writes.enter();
+	}
+
+	async function faucet() {
+		const result = await requestFundFromFaucet();
+		console.log(result);
 	}
 </script>
 
@@ -13,14 +18,14 @@
 >
 	<div class="flex h-full items-center space-x-2">
 		<!-- Logo or App Name -->
-		<span class="text-lg font-bold">{wallet.address.toAddress()}</span>
+		<button onclick={faucet} class="text-lg font-bold">{wallet.address.toAddress()}</button>
 	</div>
 	<div class="relative flex h-full items-center space-x-4">
 		<div class="flex h-full items-center space-x-2">
 			<button
 				class="flex h-8 w-8 items-center justify-center focus:outline-none"
 				aria-label="Account menu"
-				{onclick}
+				onclick={enter}
 			>
 				<ImgBlockie
 					address={wallet.address.toAddress()}
