@@ -78,7 +78,7 @@ abi Game {
     fn enter();
 
     #[storage(write, read)]
-    fn move(new_position: Position);
+    fn move(new_position: Position, i: u64);
 
     #[storage(write, read)]
     fn place_bomb();
@@ -319,7 +319,7 @@ impl Game for Contract {
     }
 
     #[storage(write, read)]
-    fn move(new_position: Position) {
+    fn move(new_position: Position, i: u64) {
         let account = msg_sender().unwrap();
         let time = _time();
 
@@ -464,7 +464,7 @@ fn can_move() {
     let account = caller.identity();
     caller.enter();
     let new_position = Position {x: 1, y: 1};
-    caller.move(new_position);
+    caller.move(new_position, 0);
     let current_position = caller.position(account);
     assert_eq(current_position, Some(new_position));
 }
@@ -490,7 +490,7 @@ fn can_get_player_in_zone_after_moving() {
     let caller = abi(Game, CONTRACT_ID);
     let account = caller.identity();
     caller.enter();
-    caller.move(Position {x: ENTRANCE.x, y: ENTRANCE.y - 1});
+    caller.move(Position {x: ENTRANCE.x, y: ENTRANCE.y - 1}, 0);
 
     let mut zones: Vec<u64> = Vec::new();
     zones.push(_calculate_zone(ENTRANCE));

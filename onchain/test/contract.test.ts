@@ -24,7 +24,7 @@ describe('Game', () => {
     await contract.functions.enter().call();
     
     let new_position = {x: 1, y: 2};
-    await contract.functions.move(new_position).call();
+    await contract.functions.move(new_position, 0).call();
     let {value: current_position} = await contract.functions.position(identity).get();
     expect(current_position?.x.toNumber()).to.equal(new_position.x);
     expect(current_position?.y.toNumber()).to.equal(new_position.y);
@@ -52,7 +52,7 @@ describe('Game', () => {
     const expected_zone = calculateZone(ENTRANCE);
     
     let {value: list_of_player_list} = await contract.functions.entities_in_zones([expected_zone]).get();
-    expect(list_of_player_list[0][0].account.Address?.bits).to.equal(identity.Address?.bits);
+    expect(list_of_player_list[0][0].Player!.account.Address?.bits).to.equal(identity.Address?.bits);
   });
 
 
@@ -86,7 +86,7 @@ describe('Game', () => {
 
     // move first account so it is in a different zone
     contract.account = wallets[0];
-    await contract.functions.move({x: ENTRANCE.x + 33, y:ENTRANCE.y}).call();
+    await contract.functions.move({x: ENTRANCE.x + 33, y:ENTRANCE.y}, 0).call();
 
 
   
@@ -98,9 +98,9 @@ describe('Game', () => {
 
     console.log(JSON.stringify(list_of_player_list, null, 2));
 
-    expect(list_of_player_list[0][0].account.Address?.bits).to.equal(wallets[2].address.toAddress());
-    expect(list_of_player_list[0][1].account.Address?.bits).to.equal(wallets[1].address.toAddress());
-    expect(list_of_player_list[3][0].account.Address?.bits).to.equal(wallets[0].address.toAddress());
+    expect(list_of_player_list[0][0].Player!.account.Address?.bits).to.equal(wallets[2].address.toAddress());
+    expect(list_of_player_list[0][1].Player!.account.Address?.bits).to.equal(wallets[1].address.toAddress());
+    expect(list_of_player_list[3][0].Player!.account.Address?.bits).to.equal(wallets[0].address.toAddress());
   });
 
 });
