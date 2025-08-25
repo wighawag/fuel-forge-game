@@ -12,10 +12,12 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 				const character = $viewState[characterID];
 				let graphics = charactersDisplayObjects[characterID];
 				if (!graphics) {
-					graphics = new Graphics().rect(50, 50, 100, 100).fill(0xff0000);
+					graphics = new Graphics().rect(0, 0, 10, 10).fill(0xff0000);
 					container.addChild(graphics);
 					charactersDisplayObjects[characterID] = graphics;
 				}
+				graphics.x = 10 * character.position.x;
+				graphics.y = 10 * character.position.y;
 			}
 			// TODO
 			// const graphics = new Graphics().rect(50, 50, 100, 100).fill(0xff0000);

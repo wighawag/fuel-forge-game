@@ -8,6 +8,7 @@
 	import { viewState } from '$lib/view';
 	import type { OnchainState } from '$lib/onchain/types';
 	import type { Renderer } from './renderer';
+	import { keyboardController } from '$lib/ui/keyboard-controller';
 
 	interface Props {
 		camera: Writable<Camera>;
@@ -58,6 +59,7 @@
 			viewport.moveCenter(0, 0);
 
 			renderer.onAppStarted(viewport);
+			keyboardController.start();
 
 			// add the viewport to the stage
 			app.stage.addChild(viewport);
@@ -159,6 +161,7 @@
 				appInitialising.then(() => {
 					console.log(`destroying Pixi Application...`);
 					// try {
+					keyboardController.stop();
 					renderer.onAppStopped();
 					// } finally {
 					app.destroy();

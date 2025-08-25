@@ -58,6 +58,7 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 	}
 
 	let unsubscribeFromCamera: (() => void) | undefined;
+	let interval: NodeJS.Timeout | undefined;
 	function start() {
 		unsubscribeFromCamera = camera.subscribe((camera) => {
 			const cameraChanged = hasCameraChanged($camera, camera);
@@ -66,6 +67,10 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 				fetchState($camera);
 			}
 		});
+
+		interval = setInterval(() => {
+			fetchState($camera);
+		}, 100);
 
 		return stop;
 	}
@@ -76,6 +81,9 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 			set({});
 			unsubscribeFromCamera();
 			unsubscribeFromCamera = undefined;
+		}
+		if (interval) {
+			clearInterval(interval);
 		}
 	}
 

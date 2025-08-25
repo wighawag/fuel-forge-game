@@ -309,4 +309,19 @@ fn can_get_player_in_zone_after_entering() {
     let player = list_of_player_list.get(0).unwrap().get(0).unwrap();
     assert_eq(player.account, account);
 }
+
+#[test]
+fn can_get_player_in_zone_after_moving() {
+    let caller = abi(Game, CONTRACT_ID);
+    let account = caller.identity();
+    caller.enter();
+    caller.move(Position {x: ENTRANCE.x, y: ENTRANCE.y - 1});
+
+    let mut zones: Vec<u64> = Vec::new();
+    zones.push(_calculate_zone(ENTRANCE));
+    let list_of_player_list = caller.players_in_zones(zones);
+    
+    let player = list_of_player_list.get(0).unwrap().get(0).unwrap();
+    assert_eq(player.account, account);
+}
 // ----------------------------------------------------------------------------
