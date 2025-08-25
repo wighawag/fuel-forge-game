@@ -1,4 +1,4 @@
-import type { Character, OnchainState } from '$lib/onchain/types';
+import type { Entity, OnchainState } from '$lib/onchain/types';
 import { Blockie } from '$lib/utils/ethereum/blockie';
 import { viewState } from '$lib/view';
 import { Container, Graphics, Sprite } from 'pixi.js';
@@ -10,53 +10,60 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 	let unsubscribe: (() => void) | undefined = undefined;
 
 	function onAppStarted(container: Container) {
-		function onObjectAdded(id: string, object: Character): Container {
+		function onEntityAdded(id: string, entity: Entity): Container {
 			const displayObject = new Container();
-			const sprite = new LoadingSprite(Blockie.getURI(object.id));
-			// const graphics = new Graphics().rect(0, 0, 10, 10).fill(0xff0000);
-			// displayObject.addChild(graphics);
-			displayObject.addChild(sprite);
-			displayObject.scale = 10 / 8;
+			if (entity.type == 'player') {
+				const sprite = new LoadingSprite(Blockie.getURI(entity.id));
+				// const graphics = new Graphics().rect(0, 0, 10, 10).fill(0xff0000);
+				// displayObject.addChild(graphics);
+				displayObject.addChild(sprite);
+				displayObject.scale = 10 / 8;
+			} else if (entity.type == 'bomb') {
+				const graphics = new Graphics().rect(0, 0, 10, 10).fill(0xff0000);
+				displayObject.addChild(graphics);
+			} else {
+				console.error(`no render for entity type : ${entity.type}`);
+			}
 
 			container.addChild(displayObject);
 			displayObjects[id] = displayObject;
 			return displayObject;
 		}
 
-		function onObjectRemoved(displayObject: Container) {
+		function onEntityRemoved(displayObject: Container) {
 			// TODO removal type ?
 			container.removeChild(displayObject);
 		}
 
-		function updateObject(displayObject: Container, object: Character) {
+		function updateEntity(displayObject: Container, entity: Entity) {
 			// TODO we could tween
-			displayObject.x = 10 * object.position.x;
-			displayObject.y = 10 * object.position.y;
+			displayObject.x = 10 * entity.position.x;
+			displayObject.y = 10 * entity.position.y;
 		}
 
 		unsubscribe = viewState.subscribe(($viewState) => {
 			const processed = new Set();
 
-			const objectIDs = Object.keys($viewState);
-			for (const objectID of objectIDs) {
-				processed.add(objectID);
+			const entityIDs = Object.keys($viewState);
+			for (const entityID of entityIDs) {
+				processed.add(entityID);
 
-				const object = $viewState[objectID];
-				let displayObject = displayObjects[objectID];
+				const object = $viewState[entityID];
+				let displayObject = displayObjects[entityID];
 				if (!displayObject) {
-					displayObject = onObjectAdded(objectID, object);
+					displayObject = onEntityAdded(entityID, object);
 				} else {
 					// was already present
 				}
 				// anyway we update the value
-				updateObject(displayObject, object);
+				updateEntity(displayObject, object);
 			}
 
 			// Check for removals
 			const displayObjectIDs = Object.keys(displayObjects);
 			for (const displayObjectID of displayObjectIDs) {
 				if (!processed.has(displayObjectID)) {
-					onObjectRemoved(displayObjects[displayObjectID]);
+					onEntityRemoved(displayObjects[displayObjectID]);
 				}
 			}
 		});

@@ -44,15 +44,29 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 		for (const entitiesFetched of result.value) {
 			for (const entity of entitiesFetched) {
 				const player = entity.Player;
+				const bomb = entity.Bomb;
 				if (player) {
 					const id = player.account.Address?.bits || player.account.ContractId!.bits;
 					entities[id] = {
 						id,
+						type: 'player',
 						position: {
 							x: player.position.x.toNumber() - (1 << 30),
 							y: player.position.y.toNumber() - (1 << 30)
 						}
 					};
+				} else if (bomb) {
+					const id = `${bomb.position.x},${bomb.position.y}`;
+					entities[id] = {
+						id,
+						type: 'bomb',
+						position: {
+							x: bomb.position.x.toNumber() - (1 << 30),
+							y: bomb.position.y.toNumber() - (1 << 30)
+						}
+					};
+				} else {
+					console.error(`unknown type`, entity);
 				}
 			}
 		}

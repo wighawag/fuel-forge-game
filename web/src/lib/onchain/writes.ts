@@ -54,6 +54,12 @@ export class Writes {
 		const call = await gameContract.functions.move(position).call();
 		await call.waitForResult();
 	}
+
+	async placeBomb() {
+		const call = await gameContract.functions.place_bomb().call();
+		const callResult = await call.waitForResult();
+		console.log(callResult);
+	}
 }
 
 export const writes = new Writes();

@@ -363,7 +363,8 @@ impl Game for Contract {
                 }
 
 
-                // TODO
+                storage.tiles.insert(player.position, TileInStorage {is_bomb_tile: true, explosion_start: time + 2, explosion_end: time + 2 + 1});
+                // TODO add explostion path
 
             },
             Option::None => panic GameError::PlayerNotIn,

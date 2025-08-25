@@ -21,6 +21,10 @@ export function createKeyboardController(): KeyboardController {
 		await writes.moveRight();
 	}
 
+	async function onSpace() {
+		await writes.placeBomb();
+	}
+
 	function keydownHandler(event: KeyboardEvent) {
 		switch (event.key) {
 			// Arrow keys
@@ -53,6 +57,10 @@ export function createKeyboardController(): KeyboardController {
 			case 'd':
 			case 'D':
 				onRight();
+				break;
+
+			case ' ':
+				onSpace();
 				break;
 		}
 	}

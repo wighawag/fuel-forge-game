@@ -1,13 +1,13 @@
-import type { Readable } from "svelte/store";
+import type { Readable } from 'svelte/store';
 
-export type Character = {
+export type Entity = {
 	id: string;
 	position: { x: number; y: number };
+	type: 'player' | 'bomb';
 };
 export type OnchainState = {
-	[id: string]: Character;
+	[id: string]: Entity;
 };
-
 
 export type OnChainLayer = Readable<OnchainState>;
 
