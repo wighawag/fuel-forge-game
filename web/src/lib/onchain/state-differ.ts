@@ -28,6 +28,7 @@ export function createStateDiffer<GameObject extends {}>() {
 
 			if (typeof oldVal === 'object' && oldVal !== null) {
 				if (Array.isArray(oldVal)) {
+					// TODO this is bad
 					if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
 						changes[path] = { from: oldVal, to: newVal };
 						hasChanges = true;
