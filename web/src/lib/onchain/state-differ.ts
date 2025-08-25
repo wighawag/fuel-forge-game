@@ -1,12 +1,18 @@
 type GameState<T> = Map<string, T>;
 
+import { createEmitter } from '../emitter';
+
 export function createStateDiffer<GameObject extends {}>() {
 	let currentState = new Map<string, GameObject>();
-	let previousState = new Map<string, GameObject>();
 
-	const onAddedCallbacks: ((object: GameObject) => void)[] = [];
-	function onAdded(func: (object: GameObject) => void): () => void {}
-	function _onAdded(object: GameObject) {}
+	const { subscribe: onAdded, emit: objectAdded } = createEmitter<GameObject>();
+	const { subscribe: onRemoved, emit: objectRemoved } = createEmitter<GameObject>();
+	const { subscribe: onChanged, emit: objectChanged } = createEmitter<GameObject>();
+	const { subscribe: onDiffCompleted, emit: diffCompleted } = createEmitter<{
+		added: number;
+		removed: number;
+		total: number;
+	}>();
 
 	function getChanges(oldObj: GameObject, newObj: GameObject) {
 		const changes: Record<string, any> = {};
@@ -59,18 +65,19 @@ export function createStateDiffer<GameObject extends {}>() {
 			processed.add(id);
 
 			if (!oldState.has(id)) {
-				this.emit('object:added', { id, data: value });
+				objectAdded(value); // TODO ?{ id, data: value });
 			} else {
 				const oldValue = oldState.get(id)!;
 				const changes = getChanges(oldValue, value);
 
 				if (changes) {
-					this.emit('object:updated', {
-						id,
-						previous: oldValue,
-						current: value,
-						changes
-					});
+					objectChanged(value);
+					// TODO{
+					// 	id,
+					// 	previous: oldValue,
+					// 	current: value,
+					// 	changes
+					// });
 				}
 			}
 		});
@@ -78,12 +85,12 @@ export function createStateDiffer<GameObject extends {}>() {
 		// Check for removals
 		oldState.forEach((value, id) => {
 			if (!processed.has(id)) {
-				this.emit('object:removed', { id, data: value });
+				objectRemoved(value); // TODO { id, data: value });
 			}
 		});
 
 		// Emit batch complete event
-		this.emit('diff:complete', {
+		diffCompleted({
 			added: newState.size - oldState.size,
 			removed: oldState.size - newState.size,
 			total: newState.size
@@ -96,8 +103,6 @@ export function createStateDiffer<GameObject extends {}>() {
 		// Compute diff and emit events
 		computeAndEmitDiff(currentState, newState);
 
-		// Update state references
-		previousState = currentState;
 		currentState = newState;
 	}
 
@@ -105,6 +110,7 @@ export function createStateDiffer<GameObject extends {}>() {
 		update,
 		onAdded,
 		onRemoved,
-		onChanged
+		onChanged,
+		onDiffCompleted
 	};
 }
