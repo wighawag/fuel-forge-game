@@ -6,7 +6,7 @@ name = "test-contract"
 
 [proxy]
 enabled = true
-address = "0xfbdd8c42184aaebeaa5dd730a90e9cb8f128e15ff669f169c13703d5b6070fed"
+address = "0x26d463077a924a52031cdfec866b490affe15fd35754a22d6311417694e12525"
 
 [dependencies]
 signed_int = "0.26.0"

@@ -127,6 +127,11 @@ struct TileInStorage {
     explosion_end: u64
 }
 
+enum Link {
+    Player: Identity,
+    Tile: Position,
+}
+
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -139,7 +144,7 @@ storage {
     time_delta: u64 = 0,
     // ------------------------------------------------------------------------
     players: StorageMap<Identity, PlayerInStorage> = StorageMap {},
-    zones: StorageMap<u64, StorageVec<Identity>> = StorageMap {},
+    zones: StorageMap<u64, StorageVec<Link>> = StorageMap {},
     tiles: StorageMap<Position, TileInStorage> = StorageMap {},
 }
 // ----------------------------------------------------------------------------
@@ -190,7 +195,7 @@ fn _get_tile(position: Position) -> Option<TileInStorage> {
 #[storage(read, write)]
 fn _add_player_to_zone(account: Identity, new_zone: u64) -> u64 {
     let index = storage.zones.get(new_zone).len();
-    storage.zones.get(new_zone).push(account);
+    storage.zones.get(new_zone).push(Link::Player(account));
     index
 }
 #[storage(read, write)]
@@ -199,13 +204,41 @@ fn _remove_player_from_zone(old_zone: u64, old_index: u64) {
     if old_index == length -1 {
         let _ = storage.zones.get(old_zone).pop();
     } else {
-        let account_at_the_end = storage.zones.get(old_zone).pop().unwrap();
-        let mut player_at_the_end = storage.players.get(account_at_the_end).try_read().unwrap();
-        player_at_the_end.zone_list_index = old_index;
-        storage.players.insert(account_at_the_end, player_at_the_end);
-        storage.zones.get(old_zone).set(old_index, account_at_the_end);    
+        let link_at_the_end = storage.zones.get(old_zone).pop().unwrap();
+        match link_at_the_end {
+            Link::Player(account_at_the_end) => {
+                let mut player_at_the_end = storage.players.get(account_at_the_end).try_read().unwrap();
+                player_at_the_end.zone_list_index = old_index;
+                storage.players.insert(account_at_the_end, player_at_the_end);        
+            },
+            Link::Tile(tile_position_at_the_end) => {},
+        }
+        
+        storage.zones.get(old_zone).set(old_index, link_at_the_end);
     }
 }
+
+#[storage(read, write)]
+fn _add_bomb_to_zone(tile_position: Position, new_zone: u64) -> u64 {
+    let index = storage.zones.get(new_zone).len();
+    storage.zones.get(new_zone).push(Link::Tile(tile_position));
+    index
+}
+
+// TODO for bomb
+// #[storage(read, write)]
+// fn _remove_player_from_zone(old_zone: u64, old_index: u64) {
+//     let length = storage.zones.get(old_zone).len();
+//     if old_index == length -1 {
+//         let _ = storage.zones.get(old_zone).pop();
+//     } else {
+//         let account_at_the_end = storage.zones.get(old_zone).pop().unwrap();
+//         let mut player_at_the_end = storage.players.get(account_at_the_end).try_read().unwrap();
+//         player_at_the_end.zone_list_index = old_index;
+//         storage.players.insert(account_at_the_end, player_at_the_end);
+//         storage.zones.get(old_zone).set(old_index, account_at_the_end);    
+//     }
+// }
 
 
 #[storage(read, write)]
@@ -363,6 +396,7 @@ impl Game for Contract {
                 }
 
 
+                _add_bomb_to_zone(player.position, _calculate_zone(player.position));
                 storage.tiles.insert(player.position, TileInStorage {is_bomb_tile: true, explosion_start: time + 2, explosion_end: time + 2 + 1});
                 // TODO add explostion path
 
@@ -388,15 +422,29 @@ impl Game for Contract {
             let length = zone_entity_list.len();
             let mut counter = 0;
             while counter < length {
-                let account = zone_entity_list.get(counter).unwrap().try_read().unwrap();
-                let player = _get_player(account).unwrap();
-                list_of_entities.push(Entity::Player(Player {
-                    account: account,
-                    position: player.position,
-                    life: player.life,
-                    time: player.time,
-                    next_bomb: player.next_bomb
-                }));
+                let link = zone_entity_list.get(counter).unwrap().try_read().unwrap();
+                match link {
+                    Link::Player(account) => {
+                        let player = _get_player(account).unwrap();
+                        list_of_entities.push(Entity::Player(Player {
+                            account: account,
+                            position: player.position,
+                            life: player.life,
+                            time: player.time,
+                            next_bomb: player.next_bomb
+                        }));
+                    },
+                    Link::Tile(tile_position) => {
+                        let tile = _get_tile(tile_position).unwrap();
+                        list_of_entities.push(Entity::Bomb(Bomb {
+                            position: tile_position,
+                            length: 0, // TODO no effect for now
+                            start: tile.explosion_start,
+                            end: tile.explosion_end,
+                        }));
+                    }
+                }
+                
                 counter = counter + 1
             }
             list_of_entity_list.push(list_of_entities);
