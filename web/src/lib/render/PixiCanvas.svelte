@@ -3,8 +3,9 @@
 	import { Application, Graphics } from 'pixi.js';
 	import { initDevtools } from '@pixi/devtools';
 	import { onMount } from 'svelte';
-	import type { Writable } from 'svelte/store';
+	import { get, type Writable } from 'svelte/store';
 	import type { Camera } from './camera';
+	import { viewState } from '$lib/view';
 
 	interface Props {
 		camera: Writable<Camera>;
@@ -83,6 +84,16 @@
 			viewport.moveCenter(0, 0);
 
 			viewport.addChild(gridPixel);
+
+			// TODO + update
+			// need to keep track of what need to be ADDED and REMOVED
+			// ADDED is easy as we can have a dict (characterID => DisplayObject)
+			// REMOVED required to get the list of characterId that was previouly added and a dict of characterID from state
+			const characters = get(viewState);
+			const charactersDisplayObjects = {};
+			for (const key of Object.keys(characters)) {
+				const charactersDisplayObject = {}; // TODO
+			}
 
 			// Listen for animate update
 			app.ticker.add((time) => {
