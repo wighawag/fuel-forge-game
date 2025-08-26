@@ -316,7 +316,7 @@ impl Game for Contract {
                     time: time,
                     zone_list_index: zone_list_index,
                     next_bomb: 0,
-                    life: 100
+                    life: 1
                 };
                 storage.players.insert(account, player);
                 // TODO Event
@@ -410,9 +410,76 @@ impl Game for Contract {
 
 
                 _add_bomb_to_zone(player.position, _calculate_zone(player.position));
-                storage.tiles.insert(player.position, TileInStorage {is_bomb_tile: true, explosion_start: time + 5, explosion_end: time + 5 + 2});
-                // TODO add explostion path
-
+                let explosion_start = time + 7; 
+                let explosion_end = explosion_start + 3;
+                storage.tiles.insert(
+                    player.position,
+                    TileInStorage {
+                        is_bomb_tile: true,
+                        explosion_start:explosion_start,
+                        explosion_end:explosion_end
+                    }
+                );
+                let mut down_counter = 0;
+                while (down_counter < 4) {
+                    storage.tiles.insert(
+                        Position {
+                            x: player.position.x,
+                            y: player.position.y + down_counter,
+                        },
+                        TileInStorage {
+                            is_bomb_tile: false, 
+                            explosion_start:explosion_start,
+                            explosion_end:explosion_end
+                        }
+                    );
+                    down_counter  = down_counter + 1;
+                }
+                let mut up_counter = 0;
+                while (up_counter < 4) {
+                    storage.tiles.insert(
+                        Position {
+                            x: player.position.x,
+                            y: player.position.y - up_counter,
+                        },
+                        TileInStorage {
+                            is_bomb_tile: false, 
+                            explosion_start:explosion_start,
+                            explosion_end:explosion_end
+                        }
+                    );
+                    up_counter  = up_counter + 1;
+                }
+                let mut left_counter = 0;
+                while (left_counter < 4) {
+                    storage.tiles.insert(
+                        Position {
+                            x: player.position.x - left_counter,
+                            y: player.position.y,
+                        },
+                        TileInStorage {
+                            is_bomb_tile: false, 
+                            explosion_start:explosion_start,
+                            explosion_end:explosion_end
+                        }
+                    );
+                    left_counter  = left_counter + 1;
+                }
+                let mut righ_counter = 0;
+                while (righ_counter < 4) {
+                    storage.tiles.insert(
+                        Position {
+                            x: player.position.x + righ_counter,
+                            y: player.position.y,
+                        },
+                        TileInStorage {
+                            is_bomb_tile: false, 
+                            explosion_start:explosion_start,
+                            explosion_end:explosion_end
+                        }
+                    );
+                    righ_counter  = righ_counter + 1;
+                }
             },
             Option::None => panic GameError::PlayerNotIn,
         }

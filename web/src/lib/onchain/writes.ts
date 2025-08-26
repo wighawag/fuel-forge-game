@@ -1,5 +1,6 @@
 import { gameContract, wallet, provider, time } from '$lib/connection';
 import { viewState } from '$lib/view';
+import type { FunctionInvocationScope } from 'fuels';
 import { get } from 'svelte/store';
 
 function convertTaiTime(num: string) {
@@ -7,6 +8,29 @@ function convertTaiTime(num: string) {
 }
 
 export class Writes {
+	async callFunction<TArgs extends Array<any> = Array<any>, TReturn = any>(
+		func: FunctionInvocationScope<TArgs, TReturn>
+	) {
+		let call;
+		try {
+			call = await func.call();
+		} catch (err) {
+			console.error(`ERROR while caling`, err);
+			return;
+		}
+		try {
+			const callResult = await call.waitForResult();
+			console.log(callResult);
+			this.updateTime();
+		} catch (err: any) {
+			if (err.metadata?.reason === 'OutOfGas') {
+				await this.callFunction(func);
+			} else {
+				console.error(`ERROR while waiting for result`, JSON.stringify(err, null, 2));
+			}
+		}
+	}
+
 	async updateTime() {
 		const before_fetch = performance.now();
 		const block = await provider.getBlock('latest');
@@ -15,14 +39,11 @@ export class Writes {
 	}
 
 	async enter() {
-		const call = await gameContract.functions.enter().call();
-		const callResult = await call.waitForResult();
-		console.log(callResult);
-		this.updateTime();
+		await this.callFunction(gameContract.functions.enter());
 	}
 
 	counter = 0;
-	async moveUp() {
+	async move(offset: { x: number; y: number }) {
 		if (get(viewState).player.locked) {
 			return;
 		}
@@ -33,71 +54,33 @@ export class Writes {
 		if (!position) {
 			throw new Error(`not in it`);
 		}
-		position.y = position.y.sub(1);
-		const call = await gameContract.functions.move(position, this.counter).call();
-		await call.waitForResult();
-		this.updateTime();
+		position.y = position.y.add(offset.y);
+		position.x = position.x.add(offset.x);
+
+		await this.callFunction(gameContract.functions.move(position, this.counter));
+	}
+
+	async moveUp() {
+		await this.move({ x: 0, y: -1 });
 	}
 
 	async moveDown() {
-		if (get(viewState).player.locked) {
-			return;
-		}
-		this.counter++;
-		const { value: position } = await gameContract.functions
-			.position({ Address: { bits: wallet.address.toAddress() } })
-			.get();
-		if (!position) {
-			throw new Error(`not in it`);
-		}
-		position.y = position.y.add(1);
-		const call = await gameContract.functions.move(position, this.counter).call();
-		await call.waitForResult();
-		this.updateTime();
+		await this.move({ x: 0, y: 1 });
 	}
 
 	async moveLeft() {
-		if (get(viewState).player.locked) {
-			return;
-		}
-		this.counter++;
-		const { value: position } = await gameContract.functions
-			.position({ Address: { bits: wallet.address.toAddress() } })
-			.get();
-		if (!position) {
-			throw new Error(`not in it`);
-		}
-		position.x = position.x.sub(1);
-		const call = await gameContract.functions.move(position, this.counter).call();
-		await call.waitForResult();
-		this.updateTime();
+		await this.move({ x: -1, y: 0 });
 	}
 
 	async moveRight() {
-		if (get(viewState).player.locked) {
-			return;
-		}
-		this.counter++;
-		const { value: position } = await gameContract.functions
-			.position({ Address: { bits: wallet.address.toAddress() } })
-			.get();
-		if (!position) {
-			throw new Error(`not in it`);
-		}
-		position.x = position.x.add(1);
-		const call = await gameContract.functions.move(position, this.counter).call();
-		await call.waitForResult();
-		this.updateTime();
+		await this.move({ x: 1, y: 0 });
 	}
 
 	async placeBomb() {
 		if (get(viewState).player.locked) {
 			return;
 		}
-		const call = await gameContract.functions.place_bomb().call();
-		const callResult = await call.waitForResult();
-		console.log(callResult);
-		this.updateTime();
+		await this.callFunction(gameContract.functions.place_bomb());
 	}
 }
 
