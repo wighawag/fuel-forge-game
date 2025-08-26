@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Viewport } from 'pixi-viewport';
-	import { Application, Graphics } from 'pixi.js';
+	import { Application, Container, Graphics } from 'pixi.js';
 	import { initDevtools } from '@pixi/devtools';
 	import { onMount } from 'svelte';
 	import { get, type Writable } from 'svelte/store';
@@ -9,6 +9,7 @@
 	import type { OnchainState } from '$lib/onchain/types';
 	import type { Renderer } from './renderer';
 	import { keyboardController } from '$lib/ui/keyboard-controller';
+	import { LoadingBitmapText } from './LoadingBtimapText';
 
 	interface Props {
 		camera: Writable<Camera>;
@@ -91,6 +92,38 @@
 			viewport.moveCenter(0, 0);
 
 			viewport.addChild(gridPixel);
+
+			// const displayObject = new Container();
+			// {
+			// 	const graphics = new Graphics().rect(0, 0, 10, 10).fill(0x00ff00);
+			// 	displayObject.addChild(graphics);
+			// }
+
+			// {
+			// 	const graphics = new Graphics().rect(0, -40, 10, 90).fill(0xff0000);
+			// 	displayObject.addChild(graphics);
+			// 	graphics.visible = false;
+			// }
+			// {
+			// 	const graphics = new Graphics().rect(-40, 0, 90, 10).fill(0xff0000);
+			// 	displayObject.addChild(graphics);
+			// 	graphics.visible = false;
+			// }
+			// {
+			// 	const text = new LoadingBitmapText({
+			// 		text: '1',
+			// 		style: {
+			// 			fontURL: 'https://pixijs.com/assets/bitmap-font/desyrel.xml',
+			// 			fontFamily: 'Desyrel',
+			// 			fontSize: 8,
+			// 			fill: 'black'
+			// 		}
+			// 	});
+			// 	text.x = 3;
+			// 	text.y = -3;
+			// 	displayObject.addChild(text);
+			// }
+			// viewport.addChild(displayObject);
 
 			// Listen for animate update
 			app.ticker.add((time) => {

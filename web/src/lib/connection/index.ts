@@ -4,7 +4,7 @@ import { TestContract } from 'fuel-forge-game-onchain/generated';
 import { writable } from 'svelte/store';
 
 let url = PUBLIC_FUEL_NODE_URL;
-let contractAddress = '0x3bb4abed0229789a1416a7e9e470e67a4392e9b4af0781b3663b8974cf3a7317';
+let contractAddress = '0x1bdd91557fba54b60072dc4c7d9a52f6a70eb93f4aecbcd326676fa771547d34';
 
 const useTestnet = PUBLIC_FUEL_NODE_URL.indexOf('quiknode') != -1;
 if (useTestnet) {

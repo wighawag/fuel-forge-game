@@ -191,7 +191,12 @@ fn _calculate_zone(position: Position) -> u64 {
 
 #[storage(read)]
 fn _get_player(account: Identity) -> Option<PlayerInStorage> {
-    storage.players.get(account).try_read()
+    let time = _time();
+    let p = storage.players.get(account).try_read();
+    match p {
+        Option::Some(p) => Option::Some(_update_player_for_explosion(p, time)),
+        Option::None => Option::None,
+    }
 }
 
 #[storage(read)]
@@ -248,7 +253,7 @@ fn _add_bomb_to_zone(tile_position: Position, new_zone: u64) -> u64 {
 // }
 
 
-#[storage(read, write)]
+#[storage(read)]
 fn _update_player_for_explosion(player: PlayerInStorage, time: u64) -> PlayerInStorage {
     let mut updated_player = PlayerInStorage {
         position: player.position,
@@ -331,9 +336,9 @@ impl Game for Contract {
         let time = _time();
 
         match _get_player(account) {
-            Option::Some(p) => {
+            Option::Some(player) => {
 
-                let player = _update_player_for_explosion(p, time);
+               
                 if player.life  == 0 {
                     panic GameError::PlayerIsDead;
                 }
@@ -388,9 +393,8 @@ impl Game for Contract {
         let account = msg_sender().unwrap();
         let time = _time();
         match _get_player(account) {
-            Option::Some(p) => {
+            Option::Some(player) => {
 
-                let player = _update_player_for_explosion(p, time);
                 if player.life  == 0 {
                     panic GameError::PlayerIsDead;
                 }
@@ -410,7 +414,7 @@ impl Game for Contract {
 
 
                 _add_bomb_to_zone(player.position, _calculate_zone(player.position));
-                let explosion_start = time + 7; 
+                let explosion_start = time + 10; 
                 let explosion_end = explosion_start + 3;
                 storage.tiles.insert(
                     player.position,
