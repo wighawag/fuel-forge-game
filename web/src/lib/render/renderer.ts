@@ -108,7 +108,11 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 				if (entity.type === 'player') {
 					if (entity.life == 0) {
 						displayObject.children[3].visible = true;
-					} else if (id == wallet.address.toAddress()) {
+					} else {
+						displayObject.children[3].visible = false;
+					}
+
+					if (id == wallet.address.toAddress()) {
 						if (entity.time > time.now() - 0.9) {
 							displayObject.children[1].visible = false;
 							displayObject.children[2].visible = true;

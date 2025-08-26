@@ -51,7 +51,7 @@ describe('Game', () => {
   
     const expected_zone = calculateZone(ENTRANCE);
     
-    let {value: zonesInfo} = await contract.functions.get_zones([expected_zone]).get();
+    let {value: zonesInfo} = await contract.functions.get_zones([expected_zone], 0).get();
     expect(zonesInfo.zones[0][0].Player!.account.Address?.bits).to.equal(identity.Address?.bits);
   });
 
@@ -80,7 +80,7 @@ describe('Game', () => {
       await contract.functions.enter().call();
     }
 
-    //  let {value: zonesInfo} = await contract.functions.get_zones([calculateZone(ENTRANCE)]).get();
+    //  let {value: zonesInfo} = await contract.functions.get_zones([calculateZone(ENTRANCE)], 0).get();
 
     // console.log(JSON.stringify(zonesInfo.zones, null, 2));
 
@@ -94,7 +94,7 @@ describe('Game', () => {
 
     
     
-    let {value: zonesInfo} = await contract.functions.get_zones(zones).get();
+    let {value: zonesInfo} = await contract.functions.get_zones(zones, 0).get();
 
     // console.log(JSON.stringify(zonesInfo.zones, null, 2));
 

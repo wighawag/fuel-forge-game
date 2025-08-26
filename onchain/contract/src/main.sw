@@ -94,7 +94,7 @@ abi Game {
     fn position(identity: Identity) -> Option<Position>;
 
     #[storage(read)]
-    fn get_zones(zones: Vec<u64>) -> ZonesInfo;
+    fn get_zones(zones: Vec<u64>, time_provided: u64) -> ZonesInfo;
 }
 // ----------------------------------------------------------------------------
 
@@ -190,8 +190,7 @@ fn _calculate_zone(position: Position) -> u64 {
 }
 
 #[storage(read)]
-fn _get_player(account: Identity) -> Option<PlayerInStorage> {
-    let time = _time();
+fn _get_player(account: Identity, time: u64) -> Option<PlayerInStorage> {
     let p = storage.players.get(account).try_read();
     match p {
         Option::Some(p) => Option::Some(_update_player_for_explosion(p, time)),
@@ -310,8 +309,19 @@ impl Game for Contract {
         let account = msg_sender().unwrap();
         let time = _time();
 
-        match _get_player(account) {
-            Option::Some(_) => panic GameError::PlayerAlreadyIn,
+        match _get_player(account, time) {
+            Option::Some(player) => {
+                if player.life > 0 {
+                    panic GameError::PlayerAlreadyIn;
+                }
+                storage.players.insert(account, PlayerInStorage {
+                    position: player.position,
+                    time: time,
+                    zone_list_index: player.zone_list_index,
+                    next_bomb: player.next_bomb,
+                    life: 1
+                });
+            },
             Option::None => {
                 let entrance_position = ENTRANCE;
                 let entrance_zone = _calculate_zone(entrance_position);
@@ -335,7 +345,7 @@ impl Game for Contract {
         let account = msg_sender().unwrap();
         let time = _time();
 
-        match _get_player(account) {
+        match _get_player(account, time) {
             Option::Some(player) => {
 
                
@@ -392,7 +402,7 @@ impl Game for Contract {
     fn place_bomb() {
         let account = msg_sender().unwrap();
         let time = _time();
-        match _get_player(account) {
+        match _get_player(account, time) {
             Option::Some(player) => {
 
                 if player.life  == 0 {
@@ -414,7 +424,7 @@ impl Game for Contract {
 
 
                 _add_bomb_to_zone(player.position, _calculate_zone(player.position));
-                let explosion_start = time + 10; 
+                let explosion_start = time + 10 ; 
                 let explosion_end = explosion_start + 3;
                 storage.tiles.insert(
                     player.position,
@@ -425,7 +435,7 @@ impl Game for Contract {
                     }
                 );
                 let mut down_counter = 0;
-                while (down_counter < 4) {
+                while (down_counter < 5) {
                     storage.tiles.insert(
                         Position {
                             x: player.position.x,
@@ -440,7 +450,7 @@ impl Game for Contract {
                     down_counter  = down_counter + 1;
                 }
                 let mut up_counter = 0;
-                while (up_counter < 4) {
+                while (up_counter < 5) {
                     storage.tiles.insert(
                         Position {
                             x: player.position.x,
@@ -455,7 +465,7 @@ impl Game for Contract {
                     up_counter  = up_counter + 1;
                 }
                 let mut left_counter = 0;
-                while (left_counter < 4) {
+                while (left_counter < 5) {
                     storage.tiles.insert(
                         Position {
                             x: player.position.x - left_counter,
@@ -470,7 +480,7 @@ impl Game for Contract {
                     left_counter  = left_counter + 1;
                 }
                 let mut righ_counter = 0;
-                while (righ_counter < 4) {
+                while (righ_counter < 5) {
                     storage.tiles.insert(
                         Position {
                             x: player.position.x + righ_counter,
@@ -491,15 +501,19 @@ impl Game for Contract {
 
     #[storage(read)]
     fn position(account: Identity) -> Option<Position> {
-        match _get_player(account) {
+        match _get_player(account, 0) { // TODO time ?
             Option::Some(player) => Option::Some(player.position),
             Option::None => Option::None,
         }
     }
 
     #[storage(read)]
-    fn get_zones(zones: Vec<u64>) -> ZonesInfo {
-        let time = _time();
+    fn get_zones(zones: Vec<u64>, time_provided: u64) -> ZonesInfo {
+        let actual_time = _time();
+        let mut time = actual_time;
+        if time_provided > 0 {
+            time = time_provided
+        }
         let mut list_of_entity_list: Vec<Vec<Entity>> = Vec::new();
         for zone in zones.iter() {
             let mut list_of_entities: Vec<Entity> = Vec::new();
@@ -510,7 +524,7 @@ impl Game for Contract {
                 let link = zone_entity_list.get(counter).unwrap().try_read().unwrap();
                 match link {
                     Link::Player(account) => {
-                        let player = _get_player(account).unwrap();
+                        let player = _get_player(account, time).unwrap();
                         list_of_entities.push(Entity::Player(Player {
                             account: account,
                             position: player.position,
@@ -535,7 +549,7 @@ impl Game for Contract {
             list_of_entity_list.push(list_of_entities);
         }
         ZonesInfo {
-            time: time,
+            time: actual_time,
             zones: list_of_entity_list,
         }
     }
@@ -564,7 +578,7 @@ fn can_get_player_in_zone_after_entering() {
     caller.enter();
     let mut zones: Vec<u64> = Vec::new();
     zones.push(_calculate_zone(ENTRANCE));
-    let list_of_player_list = caller.get_zones(zones).zones;
+    let list_of_player_list = caller.get_zones(zones, 0).zones;
     
     match list_of_player_list.get(0).unwrap().get(0).unwrap() {
         Entity::Player(player) => assert_eq(player.account, account),
@@ -582,7 +596,7 @@ fn can_get_player_in_zone_after_moving() {
 
     let mut zones: Vec<u64> = Vec::new();
     zones.push(_calculate_zone(ENTRANCE));
-    let list_of_player_list = caller.get_zones(zones).zones;
+    let list_of_player_list = caller.get_zones(zones, 0).zones;
     
     match list_of_player_list.get(0).unwrap().get(0).unwrap() {
         Entity::Player(player) => assert_eq(player.account, account),

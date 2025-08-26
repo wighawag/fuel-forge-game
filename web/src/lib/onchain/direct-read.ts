@@ -79,7 +79,7 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 			y: Math.floor(camera.y) + (1 << 30)
 		});
 
-		const result = await gameContract.functions.get_zones(zones).get();
+		const result = await gameContract.functions.get_zones(zones, time.now()).get();
 		if (hasCameraChanged($camera, camera)) {
 			return;
 		}

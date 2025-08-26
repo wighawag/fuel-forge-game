@@ -6,7 +6,9 @@ import { writable } from 'svelte/store';
 let url = PUBLIC_FUEL_NODE_URL;
 let contractAddress = '0x1bdd91557fba54b60072dc4c7d9a52f6a70eb93f4aecbcd326676fa771547d34';
 
-const useTestnet = PUBLIC_FUEL_NODE_URL.indexOf('quiknode') != -1;
+const useTestnet =
+	PUBLIC_FUEL_NODE_URL.indexOf('quiknode') != -1 ||
+	PUBLIC_FUEL_NODE_URL.indexOf('simplystaking') != -1;
 if (useTestnet) {
 	contractAddress = '0xc8014d0f7ca6fe57accb2e1ef13642b66cc9f9bda20ee60e434996d25b3bb081';
 }
@@ -31,7 +33,7 @@ export async function requestFundFromFaucet() {
 	const request = new ScriptTransactionRequest();
 
 	const baseAssetId = await provider.getBaseAssetId();
-	const transferAmount = 1000;
+	const transferAmount = 100_000;
 
 	request.addCoinOutput(wallet.address, transferAmount, baseAssetId);
 
