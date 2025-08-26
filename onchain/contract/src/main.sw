@@ -56,6 +56,8 @@ pub enum GameError {
     BombAlreadyThere: (),
     #[error(m = "Player is dead")]
     PlayerIsDead: (),
+    #[error(m = "Player has already moved")]
+    PlayerAlreadyMoved: (),
 }
 // ----------------------------------------------------------------------------
 
@@ -336,6 +338,12 @@ impl Game for Contract {
                     panic GameError::PlayerIsDead;
                 }
 
+                if player.time >= time {
+                    // we do not error, we just return early
+                    // panic GameError::PlayerAlreadyMoved;
+                    return;
+                }
+
                 
                 match _get_tile(new_position) {
                     Option::Some(tile) => {
@@ -402,7 +410,7 @@ impl Game for Contract {
 
 
                 _add_bomb_to_zone(player.position, _calculate_zone(player.position));
-                storage.tiles.insert(player.position, TileInStorage {is_bomb_tile: true, explosion_start: time + 2, explosion_end: time + 2 + 1});
+                storage.tiles.insert(player.position, TileInStorage {is_bomb_tile: true, explosion_start: time + 5, explosion_end: time + 5 + 2});
                 // TODO add explostion path
 
             },

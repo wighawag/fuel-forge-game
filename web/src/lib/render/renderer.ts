@@ -4,7 +4,7 @@ import { viewState } from '$lib/view';
 import { Container, Graphics, Sprite } from 'pixi.js';
 import type { Readable } from 'svelte/store';
 import { LoadingSprite } from './LoadingSprite';
-import { time } from '$lib/connection';
+import { time, wallet } from '$lib/connection';
 
 export function createRenderer(viewState: Readable<OnchainState>) {
 	let displayObjects: { [id: string]: Container } = {};
@@ -23,13 +23,34 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 					// const graphics = new Graphics().rect(0, 0, 10, 10).fill(0xff0000);
 					// displayObject.addChild(graphics);
 					displayObject.addChild(sprite);
-					displayObject.scale = 10 / 8;
+					sprite.x = 2;
+					sprite.y = 2;
+					sprite.scale = 6 / 8;
+
+					if (id == wallet.address.toAddress()) {
+						{
+							const graphics = new Graphics()
+								.rect(0, 0, 10, 10)
+								.stroke({ width: 1, color: 0x00ff00 });
+							displayObject.addChild(graphics);
+							graphics.visible = false;
+						}
+						{
+							const graphics = new Graphics()
+								.rect(0, 0, 10, 10)
+								.stroke({ width: 1, color: 0xff0000 });
+							displayObject.addChild(graphics);
+							graphics.visible = false;
+						}
+					}
 				} else if (entity.type == 'bomb') {
 					const graphics = new Graphics().rect(0, 0, 10, 10).fill(0x00ff00);
 					displayObject.addChild(graphics);
 				} else {
 					console.error(`no render for entity type : ${(entity as any).type}`);
 				}
+
+				updateEntity(displayObject, entity);
 
 				container.addChild(displayObject);
 				displayObjects[id] = displayObject;
@@ -49,6 +70,14 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 				if (entity.type === 'player') {
 					if (entity.life == 0) {
 						displayObject.alpha = 0.1;
+					} else if (displayObject.children.length == 3) {
+						if (entity.time > time.now() - 0.9) {
+							displayObject.children[1].visible = false;
+							displayObject.children[2].visible = true;
+						} else {
+							displayObject.children[1].visible = true;
+							displayObject.children[2].visible = false;
+						}
 					}
 				} else if (entity.type === 'bomb') {
 					if (entity.explosion_end < now) {

@@ -6,9 +6,8 @@ import { writable } from 'svelte/store';
 let url = PUBLIC_FUEL_NODE_URL;
 let contractAddress = '0x3bb4abed0229789a1416a7e9e470e67a4392e9b4af0781b3663b8974cf3a7317';
 
-const useTestnet = false;
+const useTestnet = PUBLIC_FUEL_NODE_URL.indexOf('quiknode') != -1;
 if (useTestnet) {
-	url = 'https://testnet.fuel.network/v1/graphql';
 	contractAddress = '0xc8014d0f7ca6fe57accb2e1ef13642b66cc9f9bda20ee60e434996d25b3bb081';
 }
 

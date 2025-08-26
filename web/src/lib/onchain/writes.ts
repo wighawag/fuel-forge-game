@@ -1,4 +1,6 @@
 import { gameContract, wallet, provider, time } from '$lib/connection';
+import { viewState } from '$lib/view';
+import { get } from 'svelte/store';
 
 function convertTaiTime(num: string) {
 	return Number(BigInt(num) - BigInt(Math.pow(2, 62)) - BigInt(10));
@@ -21,6 +23,9 @@ export class Writes {
 
 	counter = 0;
 	async moveUp() {
+		if (get(viewState).player.locked) {
+			return;
+		}
 		this.counter++;
 		const { value: position } = await gameContract.functions
 			.position({ Address: { bits: wallet.address.toAddress() } })
@@ -35,6 +40,9 @@ export class Writes {
 	}
 
 	async moveDown() {
+		if (get(viewState).player.locked) {
+			return;
+		}
 		this.counter++;
 		const { value: position } = await gameContract.functions
 			.position({ Address: { bits: wallet.address.toAddress() } })
@@ -49,6 +57,9 @@ export class Writes {
 	}
 
 	async moveLeft() {
+		if (get(viewState).player.locked) {
+			return;
+		}
 		this.counter++;
 		const { value: position } = await gameContract.functions
 			.position({ Address: { bits: wallet.address.toAddress() } })
@@ -63,6 +74,9 @@ export class Writes {
 	}
 
 	async moveRight() {
+		if (get(viewState).player.locked) {
+			return;
+		}
 		this.counter++;
 		const { value: position } = await gameContract.functions
 			.position({ Address: { bits: wallet.address.toAddress() } })
@@ -77,6 +91,9 @@ export class Writes {
 	}
 
 	async placeBomb() {
+		if (get(viewState).player.locked) {
+			return;
+		}
 		const call = await gameContract.functions.place_bomb().call();
 		const callResult = await call.waitForResult();
 		console.log(callResult);

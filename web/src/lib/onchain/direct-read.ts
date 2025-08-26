@@ -1,6 +1,6 @@
 import { get, writable, type Readable } from 'svelte/store';
 import type { OnchainState } from './types';
-import { gameContract, provider, time } from '$lib/connection';
+import { gameContract, provider, time, wallet } from '$lib/connection';
 import { calculateSurroundingZones } from 'fuel-forge-game-onchain';
 
 type Camera = {
@@ -18,6 +18,7 @@ function defaultState() {
 			fetchStart: 0,
 			fetchReceived: 0
 		},
+		player: { locked: false },
 		entities: {}
 	};
 }
@@ -82,10 +83,8 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 		if (hasCameraChanged($camera, camera)) {
 			return;
 		}
-		const state: OnchainState = {
-			time: timeStruct,
-			entities: {}
-		};
+		const state: OnchainState = defaultState();
+		state.time = timeStruct;
 
 		// console.log(new Date(state.time.value * 1000));
 
@@ -95,6 +94,10 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 				const bomb = entity.Bomb;
 				if (player) {
 					const id = player.account.Address?.bits || player.account.ContractId!.bits;
+
+					if (id == wallet.address.toAddress()) {
+						state.player.locked = player.time.toNumber() > time.now() - 0.9;
+					}
 					state.entities[id] = {
 						id,
 						type: 'player',
@@ -102,7 +105,8 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 							x: player.position.x.toNumber() - (1 << 30),
 							y: player.position.y.toNumber() - (1 << 30)
 						},
-						life: player.life.toNumber()
+						life: player.life.toNumber(),
+						time: player.time.toNumber()
 					};
 				} else if (bomb) {
 					const id = `${bomb.position.x},${bomb.position.y}`;
@@ -126,19 +130,31 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 	}
 
 	let unsubscribeFromCamera: (() => void) | undefined;
-	let interval: NodeJS.Timeout | undefined;
+	let timeout: NodeJS.Timeout | undefined;
 	function start() {
-		unsubscribeFromCamera = camera.subscribe((camera) => {
+		unsubscribeFromCamera = camera.subscribe(async (camera) => {
 			const cameraChanged = hasCameraChanged($camera, camera);
 			$camera = { ...camera };
 			if (cameraChanged) {
-				fetchState($camera);
+				if (timeout) {
+					clearTimeout(timeout);
+				}
+				try {
+					await fetchState($camera);
+				} finally {
+					timeout = setTimeout(fetchLater, 500);
+				}
 			}
 		});
 
-		interval = setInterval(() => {
+		function fetchLater() {
 			fetchState($camera);
-		}, 100);
+			timeout = setTimeout(fetchLater, 500);
+		}
+		if (timeout) {
+			clearTimeout(timeout);
+		}
+		timeout = setTimeout(fetchLater, 500);
 
 		return stop;
 	}
@@ -150,8 +166,8 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 			unsubscribeFromCamera();
 			unsubscribeFromCamera = undefined;
 		}
-		if (interval) {
-			clearInterval(interval);
+		if (timeout) {
+			clearTimeout(timeout);
 		}
 	}
 

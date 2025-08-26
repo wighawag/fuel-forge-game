@@ -4,6 +4,7 @@ export type Entity = { id: string; position: { x: number; y: number } } & (
 	| {
 			type: 'player';
 			life: number;
+			time: number;
 	  }
 	| {
 			type: 'bomb';
@@ -17,6 +18,9 @@ export type OnchainState = {
 		value: number;
 		fetchStart: number;
 		fetchReceived: number;
+	};
+	player: {
+		locked: boolean;
 	};
 	entities: { [id: string]: Entity };
 };
