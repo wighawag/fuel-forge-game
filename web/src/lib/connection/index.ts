@@ -3,7 +3,16 @@ import { PUBLIC_FUEL_NODE_URL } from '$env/static/public';
 import { TestContract } from 'fuel-forge-game-onchain/generated';
 import { writable } from 'svelte/store';
 
-export const provider = new Provider(PUBLIC_FUEL_NODE_URL);
+let url = PUBLIC_FUEL_NODE_URL;
+let contractAddress = '0x3bb4abed0229789a1416a7e9e470e67a4392e9b4af0781b3663b8974cf3a7317';
+
+const useTestnet = false;
+if (useTestnet) {
+	url = 'https://testnet.fuel.network/v1/graphql';
+	contractAddress = '0xc8014d0f7ca6fe57accb2e1ef13642b66cc9f9bda20ee60e434996d25b3bb081';
+}
+
+export const provider = new Provider(url);
 
 const LOCAL_STORAGE_KEY_PRIVATE_KEY = '__private_key__';
 let privateKey = localStorage.getItem(LOCAL_STORAGE_KEY_PRIVATE_KEY);
@@ -14,10 +23,7 @@ if (!privateKey) {
 export const wallet = Wallet.fromPrivateKey(privateKey);
 wallet.connect(provider);
 
-export const gameContract = new TestContract(
-	'0x3bb4abed0229789a1416a7e9e470e67a4392e9b4af0781b3663b8974cf3a7317',
-	wallet
-);
+export const gameContract = new TestContract(contractAddress, wallet);
 
 export async function requestFundFromFaucet() {
 	const faucetWallet = Wallet.fromPrivateKey('0x1');

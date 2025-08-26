@@ -51,7 +51,9 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 						displayObject.alpha = 0.1;
 					}
 				} else if (entity.type === 'bomb') {
-					if (entity.explosion_start < now) {
+					if (entity.explosion_end < now) {
+						displayObject.visible = false;
+					} else if (entity.explosion_start < now) {
 						if (displayObject.children.length == 1) {
 							{
 								const graphics = new Graphics().rect(0, -40, 10, 90).fill(0xff0000);
@@ -62,16 +64,6 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 								displayObject.addChild(graphics);
 							}
 						}
-					}
-
-					if (entity.explosion_end < now) {
-						//$viewState.time.value
-						displayObject.visible = false;
-					} else {
-						// console.log(
-						// 	`now: ${new Date(now * 1000)}  /${new Date($viewState.time.value * 1000)}`,
-						// 	`bomb: ${new Date(entity.explosion_end * 1000)}`
-						// );
 					}
 				}
 			}
