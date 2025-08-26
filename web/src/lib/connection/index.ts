@@ -1,5 +1,5 @@
 import { Provider, ScriptTransactionRequest, Wallet, type AccountCoinQuantity } from 'fuels';
-import { PUBLIC_FUEL_NODE_URL } from '$env/static/public';
+import { PUBLIC_FUEL_NODE_URL, PUBLIC_FAUCET_PRIVATE_KEY } from '$env/static/public';
 import { TestContract } from 'fuel-forge-game-onchain/generated';
 import { writable } from 'svelte/store';
 
@@ -15,6 +15,12 @@ if (useTestnet) {
 
 export const provider = new Provider(url);
 
+const new_privateKey = Wallet.generate();
+console.log({
+	address: new_privateKey.address.toAddress(),
+	privateKey: new_privateKey.privateKey
+});
+
 const LOCAL_STORAGE_KEY_PRIVATE_KEY = '__private_key__';
 let privateKey = localStorage.getItem(LOCAL_STORAGE_KEY_PRIVATE_KEY);
 if (!privateKey) {
@@ -27,7 +33,7 @@ wallet.connect(provider);
 export const gameContract = new TestContract(contractAddress, wallet);
 
 export async function requestFundFromFaucet() {
-	const faucetWallet = Wallet.fromPrivateKey('0x1');
+	const faucetWallet = Wallet.fromPrivateKey(PUBLIC_FAUCET_PRIVATE_KEY);
 	faucetWallet.connect(provider);
 
 	const request = new ScriptTransactionRequest();
