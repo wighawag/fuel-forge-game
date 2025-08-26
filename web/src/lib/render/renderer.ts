@@ -25,7 +25,7 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 					displayObject.addChild(sprite);
 					displayObject.scale = 10 / 8;
 				} else if (entity.type == 'bomb') {
-					const graphics = new Graphics().rect(0, 0, 10, 10).fill(0xff0000);
+					const graphics = new Graphics().rect(0, 0, 10, 10).fill(0x00ff00);
 					displayObject.addChild(graphics);
 				} else {
 					console.error(`no render for entity type : ${(entity as any).type}`);
@@ -51,6 +51,19 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 						displayObject.alpha = 0.1;
 					}
 				} else if (entity.type === 'bomb') {
+					if (entity.explosion_start < now) {
+						if (displayObject.children.length == 1) {
+							{
+								const graphics = new Graphics().rect(0, -40, 10, 90).fill(0xff0000);
+								displayObject.addChild(graphics);
+							}
+							{
+								const graphics = new Graphics().rect(-40, 0, 90, 10).fill(0xff0000);
+								displayObject.addChild(graphics);
+							}
+						}
+					}
+
 					if (entity.explosion_end < now) {
 						//$viewState.time.value
 						displayObject.visible = false;

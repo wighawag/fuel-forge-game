@@ -79,7 +79,7 @@
 				minWidth
 			});
 
-			viewport.fit(true, 7 * cellSize, 7 * cellSize);
+			viewport.fit(true, 20 * cellSize, 20 * cellSize);
 
 			const gridSize = Math.max(maxWidth, maxHeight) + 2 * cellSize;
 

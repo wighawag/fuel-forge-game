@@ -15,7 +15,7 @@ export const wallet = Wallet.fromPrivateKey(privateKey);
 wallet.connect(provider);
 
 export const gameContract = new TestContract(
-	'0x9611421031a3193b2a90ab6de35300addd309ac0a1aaf89a66bee1d976983364',
+	'0x3bb4abed0229789a1416a7e9e470e67a4392e9b4af0781b3663b8974cf3a7317',
 	wallet
 );
 
