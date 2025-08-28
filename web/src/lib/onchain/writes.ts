@@ -44,9 +44,6 @@ export class Writes {
 
 	counter = 0;
 	async move(offset: { x: number; y: number }) {
-		if (get(viewState).player.locked) {
-			return;
-		}
 		this.counter++;
 		const { value: position } = await gameContract.functions
 			.position({ Address: { bits: wallet.address.toAddress() } })
@@ -77,9 +74,6 @@ export class Writes {
 	}
 
 	async placeBomb() {
-		if (get(viewState).player.locked) {
-			return;
-		}
 		await this.callFunction(gameContract.functions.place_bomb());
 	}
 }

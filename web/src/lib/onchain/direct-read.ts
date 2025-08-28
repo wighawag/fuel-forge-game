@@ -12,13 +12,6 @@ type Camera = {
 
 function defaultState() {
 	return {
-		time: {
-			lastBlockTime: 0,
-			value: 0,
-			fetchStart: 0,
-			fetchReceived: 0
-		},
-		player: { locked: false },
 		entities: {}
 	};
 }
@@ -48,32 +41,6 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 	}
 
 	async function fetchState(camera: Camera) {
-		let timeStruct = $state.time;
-		if (timeStruct.lastBlockTime == 0) {
-			let fetchStart = performance.now();
-			const block = await provider.getBlock('latest');
-			let fetchReceived = performance.now();
-			const lastBlockTime = Number(convertTaiTime(block!.time));
-			// console.log(`block Time : ${new Date(lastBlockTime * 1000)}`);
-			timeStruct = {
-				lastBlockTime,
-				value: lastBlockTime,
-				fetchReceived,
-				fetchStart
-			};
-		} else {
-			const now = performance.now();
-			const fetchPredictedTime = (timeStruct.fetchReceived + timeStruct.fetchStart) / 2;
-			const timePassed = (now - fetchPredictedTime) / 1000;
-			// console.log(timePassed);
-			timeStruct = {
-				lastBlockTime: timeStruct.lastBlockTime,
-				value: timeStruct.lastBlockTime + timePassed,
-				fetchReceived: timeStruct.fetchReceived,
-				fetchStart: timeStruct.fetchStart
-			};
-		}
-
 		const zones = calculateSurroundingZones({
 			x: Math.floor(camera.x) + (1 << 30),
 			y: Math.floor(camera.y) + (1 << 30)
@@ -84,7 +51,6 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 			return;
 		}
 		const state: OnchainState = defaultState();
-		state.time = timeStruct;
 
 		// console.log(new Date(state.time.value * 1000));
 
@@ -95,10 +61,7 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 				if (player) {
 					const id = player.account.Address?.bits || player.account.ContractId!.bits;
 
-					if (id == wallet.address.toAddress()) {
-						state.player.locked = player.time.toNumber() > time.now() - 0.9;
-					}
-					state.entities[id] = {
+					const entity = {
 						id,
 						type: 'player',
 						position: {
@@ -107,7 +70,11 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 						},
 						life: player.life.toNumber(),
 						time: player.time.toNumber()
-					};
+					} as const;
+					state.entities[id] = entity;
+					if (id == wallet.address.toAddress()) {
+						state.player = entity;
+					}
 				} else if (bomb) {
 					const id = `${bomb.position.x},${bomb.position.y}`;
 					state.entities[id] = {
@@ -142,7 +109,7 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 				try {
 					await fetchState($camera);
 				} finally {
-					timeout = setTimeout(fetchLater, 500);
+					timeout = setTimeout(fetchLater, 15000);
 				}
 			}
 		});

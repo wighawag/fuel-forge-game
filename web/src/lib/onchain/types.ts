@@ -13,15 +13,7 @@ export type Entity = { id: string; position: { x: number; y: number } } & (
 	  }
 );
 export type OnchainState = {
-	time: {
-		lastBlockTime: number;
-		value: number;
-		fetchStart: number;
-		fetchReceived: number;
-	};
-	player: {
-		locked: boolean;
-	};
+	player?: Entity;
 	entities: { [id: string]: Entity };
 };
 

@@ -1,5 +1,5 @@
 import { writes } from '$lib/onchain/writes';
-
+import { localState } from '$lib/view/localState';
 interface KeyboardController {
 	start: () => void;
 	stop: () => void;
@@ -8,21 +8,21 @@ interface KeyboardController {
 export function createKeyboardController(): KeyboardController {
 	// Store the event handler as a property so we can remove it later
 
-	async function onUp() {
-		await writes.moveUp();
+	function onUp() {
+		localState.move(0, -1);
 	}
-	async function onDown() {
-		await writes.moveDown();
+	function onDown() {
+		localState.move(0, 1);
 	}
-	async function onLeft() {
-		await writes.moveLeft();
+	function onLeft() {
+		localState.move(-1, 0);
 	}
-	async function onRight() {
-		await writes.moveRight();
+	function onRight() {
+		localState.move(1, 0);
 	}
 
-	async function onSpace() {
-		await writes.placeBomb();
+	function onSpace() {
+		localState.placeBomb();
 	}
 
 	function keydownHandler(event: KeyboardEvent) {
