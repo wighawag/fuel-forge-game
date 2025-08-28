@@ -1,4 +1,3 @@
-import { writes } from '$lib/onchain/writes';
 import { localState } from '$lib/view/localState';
 interface KeyboardController {
 	start: () => void;
