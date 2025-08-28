@@ -68,16 +68,22 @@ export async function requestFundFromFaucet() {
 function convertTaiTime(num: string) {
 	return Number(BigInt(num) - BigInt(Math.pow(2, 62)) - BigInt(10));
 }
+
+export type SyncedTime = {
+	lastSync?: number;
+	value: number;
+};
+
 export function createTime() {
 	let last_time = Math.floor(Date.now() / 1000);
 	let last_fetch_time = performance.now();
-	const time = writable(last_time, start);
+	const time = writable<SyncedTime>({ value: last_time }, start);
 
 	function start() {
 		let interval = setInterval(() => {
 			const now = performance.now();
 			const timePassed = now - last_fetch_time;
-			time.set(last_time + timePassed / 1000);
+			time.set({ value: last_time + timePassed / 1000, lastSync: now });
 		}, 1000);
 
 		(async () => {
@@ -97,7 +103,7 @@ export function createTime() {
 		last_fetch_time = fetchTime;
 		const now = performance.now();
 		const timePassed = now - last_fetch_time;
-		time.set(last_time + timePassed / 1000);
+		time.set({ value: last_time + timePassed / 1000, lastSync: now });
 	}
 
 	function now() {
@@ -114,3 +120,61 @@ export function createTime() {
 }
 
 export const time = createTime();
+
+export function createLocalComputer(config: {
+	COMMIT_PHASE_DURATION: number;
+	REVEAL_PHASE_DURATION: number;
+	START_TIME?: number;
+}) {
+	function calculateEpochInfo(currentTime: number) {
+		const COMMIT_PHASE_DURATION = config.COMMIT_PHASE_DURATION;
+		const REVEAL_PHASE_DURATION = config.COMMIT_PHASE_DURATION;
+		const EPOCH_DURATION = COMMIT_PHASE_DURATION + REVEAL_PHASE_DURATION;
+		const START_TIME = config.START_TIME || 0;
+
+		const timePassed = currentTime - START_TIME;
+
+		// Calculate current epoch (minimum epoch is 2 as per contract logic)
+		const currentEpoch = Math.floor(timePassed / EPOCH_DURATION) + 2;
+
+		// Calculate time within current epoch cycle
+		const timeInCurrentEpochCycle = timePassed - (currentEpoch - 2) * EPOCH_DURATION;
+
+		// Calculate time left in current epoch
+		const timeLeftInEpoch = EPOCH_DURATION - timeInCurrentEpochCycle;
+
+		// Determine if we're in commit phase or reveal phase
+		const isCommitPhase = timeInCurrentEpochCycle < COMMIT_PHASE_DURATION;
+
+		// Calculate time left for commit phase end (when commit phase will end)
+		const timeLeftForCommitEnd = isCommitPhase
+			? COMMIT_PHASE_DURATION - timeInCurrentEpochCycle
+			: 0; // If we're in reveal phase, commit phase has already ended
+
+		// Calculate time left for reveal phase end (when reveal phase will end, i.e., epoch end)
+		const timeLeftForRevealEnd = timeLeftInEpoch;
+
+		return {
+			currentEpoch,
+			timeLeftInEpoch,
+			timeInCurrentEpochCycle,
+			isCommitPhase,
+			timeLeftInPhase: isCommitPhase
+				? COMMIT_PHASE_DURATION - timeInCurrentEpochCycle
+				: REVEAL_PHASE_DURATION - (timeInCurrentEpochCycle - COMMIT_PHASE_DURATION),
+			timeLeftForCommitEnd,
+			timeLeftForRevealEnd
+		};
+	}
+
+	return {
+		calculateEpochInfo
+	};
+}
+
+export const localComputer = createLocalComputer({
+	// TODO get it from Contract Data
+	COMMIT_PHASE_DURATION: 25,
+	REVEAL_PHASE_DURATION: 5,
+	START_TIME: 0
+});

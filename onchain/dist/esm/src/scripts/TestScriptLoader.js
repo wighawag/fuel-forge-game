@@ -37,7 +37,7 @@ const abi = {
     "configurables": [],
     "errorCodes": {}
 };
-const bytecode = decompressBytecode('H4sIAAAAAAAAA5NyMGAIcGRQkHIJYNjlycBg5MDSqOAqzBDkKsDi5cLAILCxlOPR45Vnub2qV2wsPyf6i+93BbPZ1a2M6zl23M2KZAUAU8pXGkAAAAA=');
+const bytecode = decompressBytecode('H4sIAAAAAAAAA5NyMGAIcGRQkHIJYNjlycBg5MDSqOAqzBDkKsDi5cLAUPi5a1dn1lXlbJ4DVwULRS+WB36u6Zr3/dVlo2LZhAP35gAAPaBl+UAAAAA=');
 export class TestScriptLoader extends __Script {
     static abi = abi;
     static bytecode = bytecode;

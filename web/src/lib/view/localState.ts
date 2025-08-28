@@ -1,9 +1,22 @@
 import { get, writable } from 'svelte/store';
 import { onchainState } from '.';
+import { createAutoSubmitter } from '$lib/onchain/auto-submit';
 
 export type LocalAction = { type: 'move'; x: number; y: number } | { type: 'placeBomb' };
 export type LocalState = {
 	actions: LocalAction[];
+	submission?: {
+		commit: {
+			hash: string;
+			secret: string;
+			epoch: number;
+			txHash: string;
+		};
+		reveal?: {
+			epoch: number;
+			txHash: string;
+		};
+	};
 };
 
 const $state: LocalState = {
@@ -11,6 +24,9 @@ const $state: LocalState = {
 };
 const _localState = writable<LocalState>($state);
 export const localState = {
+	get value() {
+		return $state;
+	},
 	subscribe: _localState.subscribe,
 	move(x: number, y: number) {
 		const player = get(onchainState).player;
@@ -53,5 +69,12 @@ export const localState = {
 			type: 'placeBomb'
 		});
 		_localState.set($state);
-	}
+	},
+
+	async commit() {},
+
+	async reveal() {}
 };
+
+export const autoSubmitter = createAutoSubmitter();
+autoSubmitter.start();

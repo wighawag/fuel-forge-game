@@ -12,18 +12,26 @@ export var GameErrorInput;
 (function (GameErrorInput) {
     GameErrorInput["PlayerAlreadyIn"] = "PlayerAlreadyIn";
     GameErrorInput["PlayerNotIn"] = "PlayerNotIn";
-    GameErrorInput["BombAlreadyThere"] = "BombAlreadyThere";
     GameErrorInput["PlayerIsDead"] = "PlayerIsDead";
-    GameErrorInput["PlayerAlreadyMoved"] = "PlayerAlreadyMoved";
+    GameErrorInput["CommitmentHashNotMatching"] = "CommitmentHashNotMatching";
+    GameErrorInput["PreviousCommitmentNotRevealed"] = "PreviousCommitmentNotRevealed";
+    GameErrorInput["InRevealPhase"] = "InRevealPhase";
+    GameErrorInput["InCommitmentPhase"] = "InCommitmentPhase";
+    GameErrorInput["NothingToReveal"] = "NothingToReveal";
+    GameErrorInput["InvalidEpoch"] = "InvalidEpoch";
 })(GameErrorInput || (GameErrorInput = {}));
 ;
 export var GameErrorOutput;
 (function (GameErrorOutput) {
     GameErrorOutput["PlayerAlreadyIn"] = "PlayerAlreadyIn";
     GameErrorOutput["PlayerNotIn"] = "PlayerNotIn";
-    GameErrorOutput["BombAlreadyThere"] = "BombAlreadyThere";
     GameErrorOutput["PlayerIsDead"] = "PlayerIsDead";
-    GameErrorOutput["PlayerAlreadyMoved"] = "PlayerAlreadyMoved";
+    GameErrorOutput["CommitmentHashNotMatching"] = "CommitmentHashNotMatching";
+    GameErrorOutput["PreviousCommitmentNotRevealed"] = "PreviousCommitmentNotRevealed";
+    GameErrorOutput["InRevealPhase"] = "InRevealPhase";
+    GameErrorOutput["InCommitmentPhase"] = "InCommitmentPhase";
+    GameErrorOutput["NothingToReveal"] = "NothingToReveal";
+    GameErrorOutput["InvalidEpoch"] = "InvalidEpoch";
 })(GameErrorOutput || (GameErrorOutput = {}));
 ;
 const abi = {
@@ -34,6 +42,19 @@ const abi = {
         {
             "type": "()",
             "concreteTypeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d"
+        },
+        {
+            "type": "b256",
+            "concreteTypeId": "7c5ee1cecf5f8eacd1284feb5f0bf2bdea533a51e2f0c9aabe9236d335989f3b"
+        },
+        {
+            "type": "bool",
+            "concreteTypeId": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903"
+        },
+        {
+            "type": "enum Action",
+            "concreteTypeId": "4f3ae47e94aba45463c93d4d158f7b1f0058e962d9feaa4be9c353ac0528c798",
+            "metadataTypeId": 0
         },
         {
             "type": "enum GameError",
@@ -54,19 +75,36 @@ const abi = {
             ]
         },
         {
+            "type": "str",
+            "concreteTypeId": "8c25cb3686462e9a86d2883c5688a22fe738b0bbc85f458d2d2b5f3f667c6d5a"
+        },
+        {
+            "type": "struct CommitmentSubmitted",
+            "concreteTypeId": "50bdaf8480734020f9d09a0661b5f3f5acb3492ed86d2145504f1fcb781f2046",
+            "metadataTypeId": 8
+        },
+        {
             "type": "struct Position",
             "concreteTypeId": "5b037ac383fc71c3a4b2c49570d83501d3a1291a96a114187813301543541da8",
-            "metadataTypeId": 9
+            "metadataTypeId": 10
         },
         {
             "type": "struct ZonesInfo",
             "concreteTypeId": "5ca66005de6b477c6c565f3ed7bbd1fdbd7b5370fa482718bb7db781e15e50c4",
-            "metadataTypeId": 10
+            "metadataTypeId": 11
+        },
+        {
+            "type": "struct std::vec::Vec<enum Action>",
+            "concreteTypeId": "ee00c4c4e2b12c540e3f48a81de6781b6c0caa379d12632055a8236d6c186c05",
+            "metadataTypeId": 15,
+            "typeArguments": [
+                "4f3ae47e94aba45463c93d4d158f7b1f0058e962d9feaa4be9c353ac0528c798"
+            ]
         },
         {
             "type": "struct std::vec::Vec<u64>",
             "concreteTypeId": "d5bfe1d4e1ace20166c9b50cadd47e862020561bde24f5189cfc2723f5ed76f4",
-            "metadataTypeId": 14,
+            "metadataTypeId": 15,
             "typeArguments": [
                 "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
             ]
@@ -78,8 +116,18 @@ const abi = {
     ],
     "metadataTypes": [
         {
-            "type": "b256",
-            "metadataTypeId": 0
+            "type": "enum Action",
+            "metadataTypeId": 0,
+            "components": [
+                {
+                    "name": "Move",
+                    "typeId": 10
+                },
+                {
+                    "name": "PlaceBomb",
+                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d"
+                }
+            ]
         },
         {
             "type": "enum Entity",
@@ -87,7 +135,7 @@ const abi = {
             "components": [
                 {
                     "name": "Player",
-                    "typeId": 8
+                    "typeId": 9
                 },
                 {
                     "name": "Bomb",
@@ -110,19 +158,39 @@ const abi = {
                     "errorMessage": "Player not in"
                 },
                 {
-                    "name": "BombAlreadyThere",
-                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
-                    "errorMessage": "Bomb Already there"
-                },
-                {
                     "name": "PlayerIsDead",
                     "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
                     "errorMessage": "Player is dead"
                 },
                 {
-                    "name": "PlayerAlreadyMoved",
+                    "name": "CommitmentHashNotMatching",
                     "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
-                    "errorMessage": "Player has already moved"
+                    "errorMessage": "Commitment Hash Not Matching"
+                },
+                {
+                    "name": "PreviousCommitmentNotRevealed",
+                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+                    "errorMessage": "Previous Commitment Not Revealed"
+                },
+                {
+                    "name": "InRevealPhase",
+                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+                    "errorMessage": "In Reveal Phase"
+                },
+                {
+                    "name": "InCommitmentPhase",
+                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+                    "errorMessage": "In Commitment Phase"
+                },
+                {
+                    "name": "NothingToReveal",
+                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+                    "errorMessage": "Nothing To Reveal"
+                },
+                {
+                    "name": "InvalidEpoch",
+                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+                    "errorMessage": "Invalid Epoch"
                 }
             ]
         },
@@ -132,11 +200,11 @@ const abi = {
             "components": [
                 {
                     "name": "Address",
-                    "typeId": 11
+                    "typeId": 12
                 },
                 {
                     "name": "ContractId",
-                    "typeId": 12
+                    "typeId": 13
                 }
             ]
         },
@@ -171,7 +239,7 @@ const abi = {
             "components": [
                 {
                     "name": "position",
-                    "typeId": 9
+                    "typeId": 10
                 },
                 {
                     "name": "length",
@@ -188,7 +256,7 @@ const abi = {
             ]
         },
         {
-            "type": "struct Player",
+            "type": "struct CommitmentSubmitted",
             "metadataTypeId": 8,
             "components": [
                 {
@@ -196,8 +264,26 @@ const abi = {
                     "typeId": 3
                 },
                 {
+                    "name": "epoch",
+                    "typeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
+                },
+                {
+                    "name": "hash",
+                    "typeId": "7c5ee1cecf5f8eacd1284feb5f0bf2bdea533a51e2f0c9aabe9236d335989f3b"
+                }
+            ]
+        },
+        {
+            "type": "struct Player",
+            "metadataTypeId": 9,
+            "components": [
+                {
+                    "name": "account",
+                    "typeId": 3
+                },
+                {
                     "name": "position",
-                    "typeId": 9
+                    "typeId": 10
                 },
                 {
                     "name": "time",
@@ -215,7 +301,7 @@ const abi = {
         },
         {
             "type": "struct Position",
-            "metadataTypeId": 9,
+            "metadataTypeId": 10,
             "components": [
                 {
                     "name": "x",
@@ -229,7 +315,7 @@ const abi = {
         },
         {
             "type": "struct ZonesInfo",
-            "metadataTypeId": 10,
+            "metadataTypeId": 11,
             "components": [
                 {
                     "name": "time",
@@ -237,11 +323,11 @@ const abi = {
                 },
                 {
                     "name": "zones",
-                    "typeId": 14,
+                    "typeId": 15,
                     "typeArguments": [
                         {
                             "name": "",
-                            "typeId": 14,
+                            "typeId": 15,
                             "typeArguments": [
                                 {
                                     "name": "",
@@ -255,27 +341,27 @@ const abi = {
         },
         {
             "type": "struct std::address::Address",
-            "metadataTypeId": 11,
+            "metadataTypeId": 12,
             "components": [
                 {
                     "name": "bits",
-                    "typeId": 0
+                    "typeId": "7c5ee1cecf5f8eacd1284feb5f0bf2bdea533a51e2f0c9aabe9236d335989f3b"
                 }
             ]
         },
         {
             "type": "struct std::contract_id::ContractId",
-            "metadataTypeId": 12,
+            "metadataTypeId": 13,
             "components": [
                 {
                     "name": "bits",
-                    "typeId": 0
+                    "typeId": "7c5ee1cecf5f8eacd1284feb5f0bf2bdea533a51e2f0c9aabe9236d335989f3b"
                 }
             ]
         },
         {
             "type": "struct std::vec::RawVec",
-            "metadataTypeId": 13,
+            "metadataTypeId": 14,
             "components": [
                 {
                     "name": "ptr",
@@ -292,11 +378,11 @@ const abi = {
         },
         {
             "type": "struct std::vec::Vec",
-            "metadataTypeId": 14,
+            "metadataTypeId": 15,
             "components": [
                 {
                     "name": "buf",
-                    "typeId": 13,
+                    "typeId": 14,
                     "typeArguments": [
                         {
                             "name": "",
@@ -325,6 +411,25 @@ const abi = {
             ],
             "output": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0",
             "attributes": null
+        },
+        {
+            "name": "commit_actions",
+            "inputs": [
+                {
+                    "name": "hash",
+                    "concreteTypeId": "7c5ee1cecf5f8eacd1284feb5f0bf2bdea533a51e2f0c9aabe9236d335989f3b"
+                }
+            ],
+            "output": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+            "attributes": [
+                {
+                    "name": "storage",
+                    "arguments": [
+                        "write",
+                        "read"
+                    ]
+                }
+            ]
         },
         {
             "name": "enter",
@@ -401,43 +506,6 @@ const abi = {
             ]
         },
         {
-            "name": "move",
-            "inputs": [
-                {
-                    "name": "new_position",
-                    "concreteTypeId": "5b037ac383fc71c3a4b2c49570d83501d3a1291a96a114187813301543541da8"
-                },
-                {
-                    "name": "i",
-                    "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
-                }
-            ],
-            "output": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
-            "attributes": [
-                {
-                    "name": "storage",
-                    "arguments": [
-                        "write",
-                        "read"
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "place_bomb",
-            "inputs": [],
-            "output": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
-            "attributes": [
-                {
-                    "name": "storage",
-                    "arguments": [
-                        "write",
-                        "read"
-                    ]
-                }
-            ]
-        },
-        {
             "name": "position",
             "inputs": [
                 {
@@ -454,12 +522,55 @@ const abi = {
                     ]
                 }
             ]
+        },
+        {
+            "name": "reveal_actions",
+            "inputs": [
+                {
+                    "name": "account",
+                    "concreteTypeId": "ab7cd04e05be58e3fc15d424c2c4a57f824a2a2d97d67252440a3925ebdc1335"
+                },
+                {
+                    "name": "secret",
+                    "concreteTypeId": "7c5ee1cecf5f8eacd1284feb5f0bf2bdea533a51e2f0c9aabe9236d335989f3b"
+                },
+                {
+                    "name": "actions",
+                    "concreteTypeId": "ee00c4c4e2b12c540e3f48a81de6781b6c0caa379d12632055a8236d6c186c05"
+                }
+            ],
+            "output": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+            "attributes": [
+                {
+                    "name": "storage",
+                    "arguments": [
+                        "write",
+                        "read"
+                    ]
+                }
+            ]
         }
     ],
     "loggedTypes": [
         {
+            "logId": "10098701174489624218",
+            "concreteTypeId": "8c25cb3686462e9a86d2883c5688a22fe738b0bbc85f458d2d2b5f3f667c6d5a"
+        },
+        {
+            "logId": "1515152261580153489",
+            "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
+        },
+        {
+            "logId": "13213829929622723620",
+            "concreteTypeId": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903"
+        },
+        {
             "logId": "6351998143957377005",
             "concreteTypeId": "5826d4a858851fed1f0bdf9fec8c6ef8cde309190274786923e4ebc123bb37fc"
+        },
+        {
+            "logId": "5817999277258129440",
+            "concreteTypeId": "50bdaf8480734020f9d09a0661b5f3f5acb3492ed86d2145504f1fcb781f2046"
         }
     ],
     "messagesTypes": [],
@@ -469,8 +580,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 315,
-                "column": 21
+                "line": 455,
+                "column": 13
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -479,8 +590,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 353,
-                "column": 21
+                "line": 465,
+                "column": 13
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -489,8 +600,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 366,
-                "column": 29
+                "line": 407,
+                "column": 21
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -499,8 +610,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 396,
-                "column": 29
+                "line": 488,
+                "column": 13
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -509,8 +620,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 409,
-                "column": 21
+                "line": 496,
+                "column": 13
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -519,8 +630,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 415,
-                "column": 29
+                "line": 499,
+                "column": 13
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -529,8 +640,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 498,
-                "column": 29
+                "line": 262,
+                "column": 9
             },
             "logId": "6351998143957377005",
             "msg": null

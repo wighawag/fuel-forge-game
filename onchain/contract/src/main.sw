@@ -35,12 +35,51 @@ struct ZonesInfo {
     time: u64,
     zones:  Vec<Vec<Entity>>,
 }
+
+
+struct Position {
+    x: u64,
+    y: u64
+}
+
+impl Hash for Position {
+    fn hash(self, ref mut hasher: Hasher) {
+        self.x.hash(hasher);
+        self.y.hash(hasher);
+    }
+}
+
+impl PartialEq for Position {
+    fn eq(self, other: Self) -> bool {
+        self.x == other.x && self.y == other.y
+    }
+}
+
+
+enum Action {
+    Move: Position,
+    PlaceBomb: ()
+}
+
+impl Hash for Action {
+    fn hash(self, ref mut hasher: Hasher) {
+        match self {
+            Action::Move(position) => (0u8, position).hash(hasher),
+            Action::PlaceBomb(fleet) => 1u8.hash(hasher),
+        }
+    }
+}
+
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
 // EVENT TYPES
 // ----------------------------------------------------------------------------
-
+struct CommitmentSubmitted {
+    account: Identity,
+    epoch: u64,
+    hash: b256,
+}
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -52,12 +91,20 @@ pub enum GameError {
     PlayerAlreadyIn: (),
     #[error(m = "Player not in")]
     PlayerNotIn: (),
-    #[error(m = "Bomb Already there")]
-    BombAlreadyThere: (),
     #[error(m = "Player is dead")]
     PlayerIsDead: (),
-    #[error(m = "Player has already moved")]
-    PlayerAlreadyMoved: (),
+    #[error(m = "Commitment Hash Not Matching")]
+    CommitmentHashNotMatching: (),
+    #[error(m = "Previous Commitment Not Revealed")]
+    PreviousCommitmentNotRevealed: (),
+    #[error(m = "In Reveal Phase")]
+    InRevealPhase: (),
+    #[error(m = "In Commitment Phase")]
+    InCommitmentPhase: (),
+    #[error(m = "Nothing To Reveal")]
+    NothingToReveal: (),
+    #[error(m = "Invalid Epoch")]
+    InvalidEpoch: (),
 }
 // ----------------------------------------------------------------------------
 
@@ -85,10 +132,10 @@ abi Game {
     fn enter();
 
     #[storage(write, read)]
-    fn move(new_position: Position, i: u64);
+    fn commit_actions(hash: b256);
 
     #[storage(write, read)]
-    fn place_bomb();
+    fn reveal_actions(account: Identity, secret: b256, actions: Vec<Action>);
 
     #[storage(read)]
     fn position(identity: Identity) -> Option<Position>;
@@ -101,25 +148,11 @@ abi Game {
 // ----------------------------------------------------------------------------
 // STORAGE TYPES
 // ----------------------------------------------------------------------------
-
-struct Position {
-    x: u64,
-    y: u64
+struct Commitment {
+    hash: b256,
+    epoch: u64,
 }
 
-impl Hash for Position {
-    fn hash(self, ref mut hasher: Hasher) {
-        self.x.hash(hasher);
-        self.y.hash(hasher);
-    }
-}
-
-
-impl PartialEq for Position {
-    fn eq(self, other: Self) -> bool {
-        self.x == other.x && self.y == other.y
-    }
-}
 struct PlayerInStorage {
     position: Position,
     time: u64,
@@ -150,6 +183,7 @@ storage {
     // ------------------------------------------------------------------------
     time_delta: u64 = 0,
     // ------------------------------------------------------------------------
+    commitments: StorageMap<Identity, Commitment> = StorageMap {},
     players: StorageMap<Identity, PlayerInStorage> = StorageMap {},
     zones: StorageMap<u64, StorageVec<Link>> = StorageMap {},
     tiles: StorageMap<Position, TileInStorage> = StorageMap {},
@@ -160,6 +194,9 @@ storage {
 // CONSTANTS AND CONFIGURABLES
 // ----------------------------------------------------------------------------
 const ENTRANCE = Position {x: 1 << 30, y: 1 << 30}; // Start somwhere high enough
+const COMMIT_PHASE_DURATION: u64 = 25;
+const REVEAL_PHASE_DURATION: u64 = 5;
+const START_TIME: u64 = 0;
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -169,6 +206,61 @@ const ENTRANCE = Position {x: 1 << 30, y: 1 << 30}; // Start somwhere high enoug
 fn _time() -> u64 {
     const TAI_64_CONVERTER: u64 = 10 + (1 << 62);
     Time::now().as_tai64() - TAI_64_CONVERTER  + storage.time_delta.try_read().unwrap_or(0)
+}
+
+#[storage(read)]
+fn _epoch() -> (u64, bool, u64) {
+    // log("_epoch()");
+    let epoch_duration = (COMMIT_PHASE_DURATION + REVEAL_PHASE_DURATION);
+    // log(epoch_duration);
+    let time = _time();
+    // log(time);
+    let time_passed = time - START_TIME;
+    // log(time_passed);
+
+    // minimum epoch is 2, this make the minimal hypothetical previous reveal phase's epoch to be non-zero
+    let epoch = time_passed / epoch_duration + 2;
+    // log(epoch);
+    let commiting = (time_passed - ((epoch - 2) * epoch_duration)) < COMMIT_PHASE_DURATION;
+    // log(commiting);
+    // log("--------------------------------");
+    (epoch, commiting, time)
+}
+
+fn _hash_actions(actions: Vec<Action>, secret: b256) -> b256 {
+    //  sha256(
+    //     {
+    //         let mut bytes = Bytes::new();
+    //         bytes
+    //             .append(Bytes::from(encode(actions)));
+    //         bytes
+    //             .append(Bytes::from(encode(secret)));
+    //         bytes
+    //     },
+    // )
+
+    // sha256((
+    //     42u8,
+    //     true,
+    //     21u64
+    // )) 
+    sha256((
+        actions,
+        secret
+    ))
+}
+fn _check_hash(commitment_hash: b256, actions: Vec<Action>, secret: b256) {
+    // TODO reaction
+    if commitment_hash == 0x0000000000000000000000000000000000000000000000000000000000000000
+    {
+        return;
+    }
+
+    let computed_hash = _hash_actions(actions, secret);
+
+    if commitment_hash != computed_hash {
+        panic GameError::CommitmentHashNotMatching;
+    }
 }
 
 fn _calculate_zone(position: Position) -> u64 {
@@ -340,164 +432,244 @@ impl Game for Contract {
         
     }
 
-    #[storage(write, read)]
-    fn move(new_position: Position, i: u64) {
-        let account = msg_sender().unwrap();
-        let time = _time();
+     #[storage(write, read)]
+    fn commit_actions(hash: b256) {
+        // let (epoch, commiting, _time) = _epoch();
 
-        match _get_player(account, time) {
-            Option::Some(player) => {
+        log("_epoch()");
+        let epoch_duration = (COMMIT_PHASE_DURATION + REVEAL_PHASE_DURATION);
+        log(epoch_duration);
+        let time = _time();
+        log(time);
+        let time_passed = time - START_TIME;
+        log(time_passed);
+
+        // minimum epoch is 2, this make the minimal hypothetical previous reveal phase's epoch to be non-zero
+        let epoch = time_passed / epoch_duration + 2;
+        log(epoch);
+        let commiting = (time_passed - ((epoch - 2) * epoch_duration)) < COMMIT_PHASE_DURATION;
+        log(commiting);
+        log("--------------------------------");
+
+        if !commiting {
+            panic GameError::InRevealPhase;
+        }
+
+        let account = msg_sender().unwrap();
+        let mut commitment = storage.commitments.get(account).try_read().unwrap_or(Commitment {
+            hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            epoch: 0,
+        });
+
+        if commitment.epoch != 0 && commitment.epoch != epoch {
+            panic GameError::PreviousCommitmentNotRevealed;
+        }
+
+        commitment.hash = hash;
+        commitment.epoch = epoch ;
+        storage.commitments.insert(account, commitment);
+
+        log(epoch);
+
+        log(CommitmentSubmitted {
+            account: account,
+            epoch: epoch,
+            hash: hash,
+        });
+    }
+
+    #[storage(write, read)]
+    fn reveal_actions(account: Identity, secret: b256, actions: Vec<Action>) {
+        let (epoch, commiting, time) = _epoch();
+
+        log(epoch);
+
+        if commiting {
+            panic GameError::InCommitmentPhase;
+        }
+        let mut commitment = storage.commitments.get(account).try_read().unwrap_or(Commitment {
+            hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            epoch: 0,
+        });
+
+        if commitment.epoch == 0 {
+            panic GameError::NothingToReveal;
+        }
+        if commitment.epoch != epoch {
+            panic GameError::InvalidEpoch;
+        }
+
+        let hash_revealed = commitment.hash;
+        _check_hash(hash_revealed, actions, secret);
+
+        // for action in actions.iter() {
+        //     match action {
+        //         // TODO
+        //     }
+        // }
+
+        commitment.epoch = 0; // used
+        storage.commitments.insert(account, commitment);
+    }
+
+    // #[storage(write, read)]
+    // fn move(new_position: Position, i: u64) {
+    //     let account = msg_sender().unwrap();
+    //     let time = _time();
+
+    //     match _get_player(account, time) {
+    //         Option::Some(player) => {
 
                
-                if player.life  == 0 {
-                    panic GameError::PlayerIsDead;
-                }
+    //             if player.life  == 0 {
+    //                 panic GameError::PlayerIsDead;
+    //             }
 
-                if player.time >= time {
-                    // we do not error, we just return early
-                    // panic GameError::PlayerAlreadyMoved;
-                    return;
-                }
+    //             if player.time >= time {
+    //                 // we do not error, we just return early
+    //                 // panic GameError::PlayerAlreadyMoved;
+    //                 return;
+    //             }
 
                 
-                match _get_tile(new_position) {
-                    Option::Some(tile) => {
-                        if tile.is_bomb_tile && tile.explosion_end > time {
-                            panic GameError::BombAlreadyThere
-                        } else {
+    //             match _get_tile(new_position) {
+    //                 Option::Some(tile) => {
+    //                     if tile.is_bomb_tile && tile.explosion_end > time {
+    //                         panic GameError::BombAlreadyThere
+    //                     } else {
 
-                        }
-                    },
-                    Option::None => {},
-                }
+    //                     }
+    //                 },
+    //                 Option::None => {},
+    //             }
 
-                let old_zone = _calculate_zone(player.position);
-                let new_zone = _calculate_zone(new_position);
+    //             let old_zone = _calculate_zone(player.position);
+    //             let new_zone = _calculate_zone(new_position);
 
-                let mut zone_list_index = player.zone_list_index;
-                if old_zone != new_zone {
-                    _remove_player_from_zone(old_zone, zone_list_index);
-                    zone_list_index = _add_player_to_zone(account, new_zone);
-                }
+    //             let mut zone_list_index = player.zone_list_index;
+    //             if old_zone != new_zone {
+    //                 _remove_player_from_zone(old_zone, zone_list_index);
+    //                 zone_list_index = _add_player_to_zone(account, new_zone);
+    //             }
                 
-                // Update player in storage
-                // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
-                storage.players.insert(account, PlayerInStorage {
-                    position: new_position,
-                    time: time,
-                    zone_list_index: zone_list_index,
-                    life: player.life,
-                    next_bomb: player.next_bomb
-                });
+    //             // Update player in storage
+    //             // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
+    //             storage.players.insert(account, PlayerInStorage {
+    //                 position: new_position,
+    //                 time: time,
+    //                 zone_list_index: zone_list_index,
+    //                 life: player.life,
+    //                 next_bomb: player.next_bomb
+    //             });
 
-                // TODO Event
+    //             // TODO Event
 
-            },
-            Option::None => panic GameError::PlayerNotIn,
-        }
-    }
-
-
-     #[storage(write, read)]
-    fn place_bomb() {
-        let account = msg_sender().unwrap();
-        let time = _time();
-        match _get_player(account, time) {
-            Option::Some(player) => {
-
-                if player.life  == 0 {
-                    panic GameError::PlayerIsDead;
-                }
-
-                match _get_tile(player.position) {
-                    Option::Some(tile) => {
-                        if tile.is_bomb_tile && tile.explosion_end > time {
-                            panic GameError::BombAlreadyThere
-                        } else {
-
-                        }
-                    },
-                    Option::None => {
-
-                    },
-                }
+    //         },
+    //         Option::None => panic GameError::PlayerNotIn,
+    //     }
+    // }
 
 
-                _add_bomb_to_zone(player.position, _calculate_zone(player.position));
-                let explosion_start = time + 10 ; 
-                let explosion_end = explosion_start + 3;
-                storage.tiles.insert(
-                    player.position,
-                    TileInStorage {
-                        is_bomb_tile: true,
-                        explosion_start:explosion_start,
-                        explosion_end:explosion_end
-                    }
-                );
-                let mut down_counter = 0;
-                while (down_counter < 5) {
-                    storage.tiles.insert(
-                        Position {
-                            x: player.position.x,
-                            y: player.position.y + down_counter,
-                        },
-                        TileInStorage {
-                            is_bomb_tile: false, 
-                            explosion_start:explosion_start,
-                            explosion_end:explosion_end
-                        }
-                    );
-                    down_counter  = down_counter + 1;
-                }
-                let mut up_counter = 0;
-                while (up_counter < 5) {
-                    storage.tiles.insert(
-                        Position {
-                            x: player.position.x,
-                            y: player.position.y - up_counter,
-                        },
-                        TileInStorage {
-                            is_bomb_tile: false, 
-                            explosion_start:explosion_start,
-                            explosion_end:explosion_end
-                        }
-                    );
-                    up_counter  = up_counter + 1;
-                }
-                let mut left_counter = 0;
-                while (left_counter < 5) {
-                    storage.tiles.insert(
-                        Position {
-                            x: player.position.x - left_counter,
-                            y: player.position.y,
-                        },
-                        TileInStorage {
-                            is_bomb_tile: false, 
-                            explosion_start:explosion_start,
-                            explosion_end:explosion_end
-                        }
-                    );
-                    left_counter  = left_counter + 1;
-                }
-                let mut righ_counter = 0;
-                while (righ_counter < 5) {
-                    storage.tiles.insert(
-                        Position {
-                            x: player.position.x + righ_counter,
-                            y: player.position.y,
-                        },
-                        TileInStorage {
-                            is_bomb_tile: false, 
-                            explosion_start:explosion_start,
-                            explosion_end:explosion_end
-                        }
-                    );
-                    righ_counter  = righ_counter + 1;
-                }
-            },
-            Option::None => panic GameError::PlayerNotIn,
-        }
-    }
+    //  #[storage(write, read)]
+    // fn place_bomb() {
+    //     let account = msg_sender().unwrap();
+    //     let time = _time();
+    //     match _get_player(account, time) {
+    //         Option::Some(player) => {
+
+    //             if player.life  == 0 {
+    //                 panic GameError::PlayerIsDead;
+    //             }
+
+    //             match _get_tile(player.position) {
+    //                 Option::Some(tile) => {
+    //                     if tile.is_bomb_tile && tile.explosion_end > time {
+    //                         panic GameError::BombAlreadyThere
+    //                     } else {
+
+    //                     }
+    //                 },
+    //                 Option::None => {
+
+    //                 },
+    //             }
+
+
+    //             _add_bomb_to_zone(player.position, _calculate_zone(player.position));
+    //             let explosion_start = time + 10 ; 
+    //             let explosion_end = explosion_start + 3;
+    //             storage.tiles.insert(
+    //                 player.position,
+    //                 TileInStorage {
+    //                     is_bomb_tile: true,
+    //                     explosion_start:explosion_start,
+    //                     explosion_end:explosion_end
+    //                 }
+    //             );
+    //             let mut down_counter = 0;
+    //             while (down_counter < 5) {
+    //                 storage.tiles.insert(
+    //                     Position {
+    //                         x: player.position.x,
+    //                         y: player.position.y + down_counter,
+    //                     },
+    //                     TileInStorage {
+    //                         is_bomb_tile: false, 
+    //                         explosion_start:explosion_start,
+    //                         explosion_end:explosion_end
+    //                     }
+    //                 );
+    //                 down_counter  = down_counter + 1;
+    //             }
+    //             let mut up_counter = 0;
+    //             while (up_counter < 5) {
+    //                 storage.tiles.insert(
+    //                     Position {
+    //                         x: player.position.x,
+    //                         y: player.position.y - up_counter,
+    //                     },
+    //                     TileInStorage {
+    //                         is_bomb_tile: false, 
+    //                         explosion_start:explosion_start,
+    //                         explosion_end:explosion_end
+    //                     }
+    //                 );
+    //                 up_counter  = up_counter + 1;
+    //             }
+    //             let mut left_counter = 0;
+    //             while (left_counter < 5) {
+    //                 storage.tiles.insert(
+    //                     Position {
+    //                         x: player.position.x - left_counter,
+    //                         y: player.position.y,
+    //                     },
+    //                     TileInStorage {
+    //                         is_bomb_tile: false, 
+    //                         explosion_start:explosion_start,
+    //                         explosion_end:explosion_end
+    //                     }
+    //                 );
+    //                 left_counter  = left_counter + 1;
+    //             }
+    //             let mut righ_counter = 0;
+    //             while (righ_counter < 5) {
+    //                 storage.tiles.insert(
+    //                     Position {
+    //                         x: player.position.x + righ_counter,
+    //                         y: player.position.y,
+    //                     },
+    //                     TileInStorage {
+    //                         is_bomb_tile: false, 
+    //                         explosion_start:explosion_start,
+    //                         explosion_end:explosion_end
+    //                     }
+    //                 );
+    //                 righ_counter  = righ_counter + 1;
+    //             }
+    //         },
+    //         Option::None => panic GameError::PlayerNotIn,
+    //     }
+    // }
 
     #[storage(read)]
     fn position(account: Identity) -> Option<Position> {

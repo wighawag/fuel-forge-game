@@ -60,7 +60,7 @@ const abi = {
     "configurables": [],
     "errorCodes": {}
 };
-const bytecode = decompressBytecode('H4sIAAAAAAAAA5NyMGAIcGRQkHIJYNjlycBg5MDSqOAqzBDkKsDi5cLA4M5gGPNtvvwl54ne0R1rOB0S3OJir2VsMWf6epo1kPHKdACYcFYpQAAAAA==');
+const bytecode = decompressBytecode('H4sIAAAAAAAAA5NyMGAIcGRQkHIJYNjlycBg5MDSqOAqzBDkKsDi5cLAcGHf+0nap/9Yvp49yaOl+P/W73+PGT+xednzXFreb2/UrH8ALSNv3UAAAAA=');
 export class TestPredicateLoader extends __Predicate {
     static abi = abi;
     static bytecode = bytecode;

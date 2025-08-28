@@ -1,6 +1,14 @@
 import { Contract as __Contract, Interface } from "fuels";
 import type { Provider, Account, StorageSlot, Address, BigNumberish, BN, FunctionFragment, InvokeFunction } from 'fuels';
 import type { Option, Enum, Vec } from "./common.js";
+export type ActionInput = Enum<{
+    Move: PositionInput;
+    PlaceBomb: undefined;
+}>;
+export type ActionOutput = Enum<{
+    Move: PositionOutput;
+    PlaceBomb: void;
+}>;
 export type EntityInput = Enum<{
     Player: PlayerInput;
     Bomb: BombInput;
@@ -12,16 +20,24 @@ export type EntityOutput = Enum<{
 export declare enum GameErrorInput {
     PlayerAlreadyIn = "PlayerAlreadyIn",
     PlayerNotIn = "PlayerNotIn",
-    BombAlreadyThere = "BombAlreadyThere",
     PlayerIsDead = "PlayerIsDead",
-    PlayerAlreadyMoved = "PlayerAlreadyMoved"
+    CommitmentHashNotMatching = "CommitmentHashNotMatching",
+    PreviousCommitmentNotRevealed = "PreviousCommitmentNotRevealed",
+    InRevealPhase = "InRevealPhase",
+    InCommitmentPhase = "InCommitmentPhase",
+    NothingToReveal = "NothingToReveal",
+    InvalidEpoch = "InvalidEpoch"
 }
 export declare enum GameErrorOutput {
     PlayerAlreadyIn = "PlayerAlreadyIn",
     PlayerNotIn = "PlayerNotIn",
-    BombAlreadyThere = "BombAlreadyThere",
     PlayerIsDead = "PlayerIsDead",
-    PlayerAlreadyMoved = "PlayerAlreadyMoved"
+    CommitmentHashNotMatching = "CommitmentHashNotMatching",
+    PreviousCommitmentNotRevealed = "PreviousCommitmentNotRevealed",
+    InRevealPhase = "InRevealPhase",
+    InCommitmentPhase = "InCommitmentPhase",
+    NothingToReveal = "NothingToReveal",
+    InvalidEpoch = "InvalidEpoch"
 }
 export type IdentityInput = Enum<{
     Address: AddressInput;
@@ -46,6 +62,16 @@ export type BombOutput = {
     length: BN;
     start: BN;
     end: BN;
+};
+export type CommitmentSubmittedInput = {
+    account: IdentityInput;
+    epoch: BigNumberish;
+    hash: string;
+};
+export type CommitmentSubmittedOutput = {
+    account: IdentityOutput;
+    epoch: BN;
+    hash: string;
 };
 export type ContractIdInput = {
     bits: string;
@@ -85,14 +111,14 @@ export declare class TestContractInterface extends Interface {
     constructor();
     functions: {
         calculate_zone: FunctionFragment;
+        commit_actions: FunctionFragment;
         enter: FunctionFragment;
         get_time: FunctionFragment;
         get_zones: FunctionFragment;
         identity: FunctionFragment;
         increase_time: FunctionFragment;
-        move: FunctionFragment;
-        place_bomb: FunctionFragment;
         position: FunctionFragment;
+        reveal_actions: FunctionFragment;
     };
 }
 export declare class TestContract extends __Contract {
@@ -119,7 +145,13 @@ export declare class TestContract extends __Contract {
         metadataTypes: ({
             type: string;
             metadataTypeId: number;
-            components?: undefined;
+            components: ({
+                name: string;
+                typeId: number;
+            } | {
+                name: string;
+                typeId: string;
+            })[];
             typeParameters?: undefined;
         } | {
             type: string;
@@ -144,13 +176,7 @@ export declare class TestContract extends __Contract {
         } | {
             type: string;
             metadataTypeId: number;
-            components: ({
-                name: string;
-                typeId: number;
-            } | {
-                name: string;
-                typeId: string;
-            })[];
+            components?: undefined;
             typeParameters?: undefined;
         } | {
             type: string;
@@ -292,14 +318,14 @@ export declare class TestContract extends __Contract {
     interface: TestContractInterface;
     functions: {
         calculate_zone: InvokeFunction<[position: PositionInput], BN>;
+        commit_actions: InvokeFunction<[hash: string], void>;
         enter: InvokeFunction<[], void>;
         get_time: InvokeFunction<[], BN>;
         get_zones: InvokeFunction<[zones: Vec<BigNumberish>, time_provided: BigNumberish], ZonesInfoOutput>;
         identity: InvokeFunction<[], IdentityOutput>;
         increase_time: InvokeFunction<[seconds: BigNumberish], void>;
-        move: InvokeFunction<[new_position: PositionInput, i: BigNumberish], void>;
-        place_bomb: InvokeFunction<[], void>;
         position: InvokeFunction<[account: IdentityInput], Option<PositionOutput>>;
+        reveal_actions: InvokeFunction<[account: IdentityInput, secret: string, actions: Vec<ActionInput>], void>;
     };
     constructor(id: string | Address, accountOrProvider: Account | Provider);
 }
