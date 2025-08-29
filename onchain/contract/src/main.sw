@@ -354,7 +354,7 @@ fn _update_player_for_explosion(player: PlayerInStorage, epoch: u64) -> PlayerIn
     };
     match _get_tile(player.position) {
         Option::Some(tile) => {
-            if tile.explosion_start < epoch && tile.explosion_end > player.epoch {
+            if tile.explosion_start <= epoch && tile.explosion_end >= player.epoch {
                 updated_player.life = player.life -1
             }
         },
@@ -524,7 +524,7 @@ impl Game for Contract {
                             bomb_counter = bomb_counter + 1;
 
                             _add_bomb_to_zone(new_position, _calculate_zone(new_position));
-                            let explosion_start = epoch + 1 ; 
+                            let explosion_start = epoch + 2 ; 
                             let explosion_end = explosion_start + 0;
                             storage.tiles.insert(
                                 new_position,

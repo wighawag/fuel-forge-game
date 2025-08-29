@@ -29,6 +29,8 @@ function defaultState() {
 }
 const $state: LocalState = defaultState();
 const _localState = writable<LocalState>($state);
+let commiting = false;
+let revealing = false;
 export const localState = {
 	get value() {
 		return $state;
@@ -92,6 +94,11 @@ export const localState = {
 	},
 
 	async commit() {
+		if (commiting) {
+			console.log(`already commiting...`);
+			return;
+		}
+
 		const epochInfo = localComputer.calculateEpochInfo(time.now());
 		const { currentEpoch: epoch } = epochInfo;
 
@@ -107,21 +114,31 @@ export const localState = {
 		// TODO
 		const secret = '0x0000000000000000000000000000000000000000000000000000000000000001';
 
-		const { transactionID, wait } = await writes.commit_actions(secret, $state.actions);
+		try {
+			commiting = true;
+			const { transactionID, wait } = await writes.commit_actions(secret, $state.actions);
+			commiting = false;
+			$state.submission = {
+				commit: {
+					epoch,
+					secret,
+					txHash: transactionID
+				}
+			};
+			_localState.set($state);
 
-		$state.submission = {
-			commit: {
-				epoch,
-				secret,
-				txHash: transactionID
-			}
-		};
-		_localState.set($state);
-
-		await wait();
+			await wait();
+		} catch (err) {
+			console.error(err);
+			commiting = false;
+		}
 	},
 
 	async reveal() {
+		if (revealing) {
+			console.log(`already revealing...`);
+			return;
+		}
 		const epochInfo = localComputer.calculateEpochInfo(time.now());
 		const { currentEpoch: epoch } = epochInfo;
 
@@ -138,22 +155,30 @@ export const localState = {
 		if (!commitment) {
 			throw new Error(`cannot reveal without commitment info`);
 		}
-		const { transactionID, wait } = await writes.reveal_actions(
-			wallet.address.toAddress(),
-			commitment.secret,
-			$state.actions
-		);
 
-		$state.submission = {
-			commit: commitment,
-			reveal: {
-				epoch,
-				txHash: transactionID
-			}
-		};
-		_localState.set($state);
+		try {
+			revealing = true;
+			const { transactionID, wait } = await writes.reveal_actions(
+				wallet.address.toAddress(),
+				commitment.secret,
+				$state.actions
+			);
+			revealing = false;
 
-		await wait();
+			$state.submission = {
+				commit: commitment,
+				reveal: {
+					epoch,
+					txHash: transactionID
+				}
+			};
+			_localState.set($state);
+
+			await wait();
+		} catch (err) {
+			console.error(err);
+			revealing = false;
+		}
 	}
 };
 
