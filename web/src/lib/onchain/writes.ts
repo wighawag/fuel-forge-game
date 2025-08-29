@@ -1,34 +1,54 @@
 import { gameContract, wallet, provider, time } from '$lib/connection';
-import { viewState } from '$lib/view';
+import type { LocalAction } from '$lib/view/localState';
+import { Hasher } from 'fuel-ts-hasher';
 import type { FunctionInvocationScope } from 'fuels';
-import { get } from 'svelte/store';
 
 function convertTaiTime(num: string) {
 	return Number(BigInt(num) - BigInt(Math.pow(2, 62)) - BigInt(10));
+}
+
+export type TransactionExecution = { transactionID: string; wait(): Promise<void> };
+
+const ENUM_CONTEXT = {
+	ActionInput: ['Move', 'PlaceBomb']
+};
+
+async function createTransactionExecution<TArgs extends Array<any> = Array<any>, TReturn = any>(
+	func: FunctionInvocationScope<TArgs, TReturn>,
+	afterCallResult?: () => void
+): Promise<TransactionExecution> {
+	const call = await func.call();
+
+	return {
+		transactionID: call.transactionId,
+		async wait() {
+			const callResult = await call.waitForResult();
+			console.log(callResult);
+		}
+	};
+}
+
+function fromActionsToActionsInput(actions: LocalAction[]) {
+	return actions.map((v) => {
+		if (v.type === 'move') {
+			return {
+				Move: { x: v.x + (1 << 30), y: v.y + (1 << 30) }
+			};
+		} else {
+			return {
+				PlaceBomb: undefined
+			};
+		}
+	});
 }
 
 export class Writes {
 	async callFunction<TArgs extends Array<any> = Array<any>, TReturn = any>(
 		func: FunctionInvocationScope<TArgs, TReturn>
 	) {
-		let call;
-		try {
-			call = await func.call();
-		} catch (err) {
-			console.error(`ERROR while caling`, err);
-			return;
-		}
-		try {
-			const callResult = await call.waitForResult();
-			console.log(callResult);
+		return createTransactionExecution(func, () => {
 			this.updateTime();
-		} catch (err: any) {
-			if (err.metadata?.reason === 'OutOfGas') {
-				await this.callFunction(func);
-			} else {
-				console.error(`ERROR while waiting for result`, JSON.stringify(err, null, 2));
-			}
-		}
+		});
 	}
 
 	async updateTime() {
@@ -38,43 +58,32 @@ export class Writes {
 		time.updateTime(lastBlockTime, before_fetch);
 	}
 
-	async enter() {
-		await this.callFunction(gameContract.functions.enter());
+	enter() {
+		return this.callFunction(gameContract.functions.enter());
 	}
 
-	counter = 0;
-	async move(offset: { x: number; y: number }) {
-		this.counter++;
-		const { value: position } = await gameContract.functions
-			.position({ Address: { bits: wallet.address.toAddress() } })
-			.get();
-		if (!position) {
-			throw new Error(`not in it`);
-		}
-		position.y = position.y.add(offset.y);
-		position.x = position.x.add(offset.x);
+	async commit_actions(secret: string, actions: LocalAction[]) {
+		const actionsInput = fromActionsToActionsInput(actions);
+		const hasher = new Hasher(ENUM_CONTEXT);
+		const hash = hasher.update(actionsInput).update(secret).finalize();
+		const call = await gameContract.functions.commit_actions(hash).call();
 
-		await this.callFunction(gameContract.functions.move(position, this.counter));
+		const self = this;
+		return {
+			transactionID: call.transactionId,
+			async wait() {
+				const callResult = await call.waitForResult();
+				console.log(callResult);
+				self.updateTime();
+			}
+		};
 	}
 
-	async moveUp() {
-		await this.move({ x: 0, y: -1 });
-	}
-
-	async moveDown() {
-		await this.move({ x: 0, y: 1 });
-	}
-
-	async moveLeft() {
-		await this.move({ x: -1, y: 0 });
-	}
-
-	async moveRight() {
-		await this.move({ x: 1, y: 0 });
-	}
-
-	async placeBomb() {
-		await this.callFunction(gameContract.functions.place_bomb());
+	reveal_actions(account: string, secret: string, actions: LocalAction[]) {
+		const actionsInput = fromActionsToActionsInput(actions);
+		return this.callFunction(
+			gameContract.functions.reveal_actions({ Address: { bits: account } }, secret, actionsInput)
+		);
 	}
 }
 

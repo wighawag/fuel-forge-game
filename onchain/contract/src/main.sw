@@ -14,9 +14,8 @@ use std::storage::storage_vec::*;
 struct Player {
     account: Identity,
     position: Position,
-    time: u64,
-    life: u64,
-    next_bomb: u64
+    epoch: u64,
+    life: u64
 }
 
 struct Bomb {
@@ -32,7 +31,6 @@ enum Entity {
 }
 
 struct ZonesInfo {
-    time: u64,
     zones:  Vec<Vec<Entity>>,
 }
 
@@ -105,6 +103,8 @@ pub enum GameError {
     NothingToReveal: (),
     #[error(m = "Invalid Epoch")]
     InvalidEpoch: (),
+    #[error(m = "Player needs to wait")]
+    PlayerNeedsToWait: (),
 }
 // ----------------------------------------------------------------------------
 
@@ -155,10 +155,9 @@ struct Commitment {
 
 struct PlayerInStorage {
     position: Position,
-    time: u64,
+    epoch: u64,
     zone_list_index: u64,
-    life: u64,
-    next_bomb: u64
+    life: u64
 }
 
 struct TileInStorage {
@@ -194,8 +193,8 @@ storage {
 // CONSTANTS AND CONFIGURABLES
 // ----------------------------------------------------------------------------
 const ENTRANCE = Position {x: 1 << 30, y: 1 << 30}; // Start somwhere high enough
-const COMMIT_PHASE_DURATION: u64 = 25;
-const REVEAL_PHASE_DURATION: u64 = 5;
+const COMMIT_PHASE_DURATION: u64 = 20;
+const REVEAL_PHASE_DURATION: u64 = 10;
 const START_TIME: u64 = 0;
 // ----------------------------------------------------------------------------
 
@@ -282,10 +281,10 @@ fn _calculate_zone(position: Position) -> u64 {
 }
 
 #[storage(read)]
-fn _get_player(account: Identity, time: u64) -> Option<PlayerInStorage> {
+fn _get_player(account: Identity, epoch: u64) -> Option<PlayerInStorage> {
     let p = storage.players.get(account).try_read();
     match p {
-        Option::Some(p) => Option::Some(_update_player_for_explosion(p, time)),
+        Option::Some(p) => Option::Some(_update_player_for_explosion(p, epoch)),
         Option::None => Option::None,
     }
 }
@@ -345,17 +344,16 @@ fn _add_bomb_to_zone(tile_position: Position, new_zone: u64) -> u64 {
 
 
 #[storage(read)]
-fn _update_player_for_explosion(player: PlayerInStorage, time: u64) -> PlayerInStorage {
+fn _update_player_for_explosion(player: PlayerInStorage, epoch: u64) -> PlayerInStorage {
     let mut updated_player = PlayerInStorage {
         position: player.position,
-        time: player.time,
+        epoch: player.epoch,
         zone_list_index: player.zone_list_index,
-        life: player.life,
-        next_bomb: player.next_bomb
+        life: player.life
     };
     match _get_tile(player.position) {
         Option::Some(tile) => {
-            if tile.explosion_start < time && tile.explosion_end > player.time {
+            if tile.explosion_start < epoch && tile.explosion_end > player.epoch {
                 updated_player.life = player.life -1
             }
         },
@@ -399,18 +397,19 @@ impl Game for Contract {
     #[storage(write, read)]
     fn enter() {
         let account = msg_sender().unwrap();
-        let time = _time();
+        let (current_epoch, commiting, _time) = _epoch();
 
-        match _get_player(account, time) {
+        let epoch = current_epoch + 1; // The player can only play next epoch
+
+        match _get_player(account, epoch) {
             Option::Some(player) => {
                 if player.life > 0 {
                     panic GameError::PlayerAlreadyIn;
                 }
                 storage.players.insert(account, PlayerInStorage {
                     position: player.position,
-                    time: time,
+                    epoch: epoch,
                     zone_list_index: player.zone_list_index,
-                    next_bomb: player.next_bomb,
                     life: 1
                 });
             },
@@ -420,9 +419,8 @@ impl Game for Contract {
                 let zone_list_index = _add_player_to_zone(account, entrance_zone);
                 let player = PlayerInStorage {
                     position: entrance_position,
-                    time: time,
+                    epoch: epoch,
                     zone_list_index: zone_list_index,
-                    next_bomb: 0,
                     life: 1
                 };
                 storage.players.insert(account, player);
@@ -434,36 +432,35 @@ impl Game for Contract {
 
      #[storage(write, read)]
     fn commit_actions(hash: b256) {
-        // let (epoch, commiting, _time) = _epoch();
-
-        log("_epoch()");
-        let epoch_duration = (COMMIT_PHASE_DURATION + REVEAL_PHASE_DURATION);
-        log(epoch_duration);
-        let time = _time();
-        log(time);
-        let time_passed = time - START_TIME;
-        log(time_passed);
-
-        // minimum epoch is 2, this make the minimal hypothetical previous reveal phase's epoch to be non-zero
-        let epoch = time_passed / epoch_duration + 2;
-        log(epoch);
-        let commiting = (time_passed - ((epoch - 2) * epoch_duration)) < COMMIT_PHASE_DURATION;
-        log(commiting);
-        log("--------------------------------");
+        let (epoch, commiting, _time) = _epoch();
 
         if !commiting {
             panic GameError::InRevealPhase;
         }
 
         let account = msg_sender().unwrap();
+
+        match _get_player(account, epoch) {
+            Option::Some(player) => {
+                if player.life  == 0 {
+                    panic GameError::PlayerIsDead;
+                }
+
+                if player.epoch > epoch {
+                    panic GameError::PlayerNeedsToWait;
+                }
+            },
+            Option::None => panic GameError::PlayerNotIn,
+        }
+
         let mut commitment = storage.commitments.get(account).try_read().unwrap_or(Commitment {
             hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
             epoch: 0,
         });
 
-        if commitment.epoch != 0 && commitment.epoch != epoch {
-            panic GameError::PreviousCommitmentNotRevealed;
-        }
+        // if commitment.epoch != 0 && commitment.epoch != epoch {
+        //     panic GameError::PreviousCommitmentNotRevealed;
+        // }
 
         commitment.hash = hash;
         commitment.epoch = epoch ;
@@ -480,9 +477,8 @@ impl Game for Contract {
 
     #[storage(write, read)]
     fn reveal_actions(account: Identity, secret: b256, actions: Vec<Action>) {
-        let (epoch, commiting, time) = _epoch();
+        let (epoch, commiting, _time) = _epoch();
 
-        log(epoch);
 
         if commiting {
             panic GameError::InCommitmentPhase;
@@ -502,174 +498,135 @@ impl Game for Contract {
         let hash_revealed = commitment.hash;
         _check_hash(hash_revealed, actions, secret);
 
-        // for action in actions.iter() {
-        //     match action {
-        //         // TODO
-        //     }
-        // }
+        
+        match _get_player(account, epoch) {
+            Option::Some(player) => {
+                if player.life  == 0 {
+                    // panic GameError::PlayerIsDead;
+                    // this should actually not as we should prevent commit from happening
+                    return;
+                }
 
-        commitment.epoch = 0; // used
-        storage.commitments.insert(account, commitment);
+                let mut bomb_counter = 0;
+                let mut current_position = Position {x: player.position.x, y: player.position.y};
+                for action in actions.iter() {
+                    match action {
+                        Action::Move(position) => {
+                            // TODO checks
+                            current_position = position;
+                        },
+                        Action::PlaceBomb => {
+                            if bomb_counter > 0 {
+                                // we currently only allow one bonb
+                                continue;
+                            }
+                            bomb_counter = bomb_counter + 1;
+
+                            _add_bomb_to_zone(player.position, _calculate_zone(player.position));
+                            let explosion_start = epoch + 1 ; 
+                            let explosion_end = explosion_start + 0;
+                            storage.tiles.insert(
+                                player.position,
+                                TileInStorage {
+                                    is_bomb_tile: true,
+                                    explosion_start:explosion_start,
+                                    explosion_end:explosion_end
+                                }
+                            );
+                            let mut down_counter = 0;
+                            while (down_counter < 5) {
+                                storage.tiles.insert(
+                                    Position {
+                                        x: player.position.x,
+                                        y: player.position.y + down_counter,
+                                    },
+                                    TileInStorage {
+                                        is_bomb_tile: false, 
+                                        explosion_start:explosion_start,
+                                        explosion_end:explosion_end
+                                    }
+                                );
+                                down_counter  = down_counter + 1;
+                            }
+                            let mut up_counter = 0;
+                            while (up_counter < 5) {
+                                storage.tiles.insert(
+                                    Position {
+                                        x: player.position.x,
+                                        y: player.position.y - up_counter,
+                                    },
+                                    TileInStorage {
+                                        is_bomb_tile: false, 
+                                        explosion_start:explosion_start,
+                                        explosion_end:explosion_end
+                                    }
+                                );
+                                up_counter  = up_counter + 1;
+                            }
+                            let mut left_counter = 0;
+                            while (left_counter < 5) {
+                                storage.tiles.insert(
+                                    Position {
+                                        x: player.position.x - left_counter,
+                                        y: player.position.y,
+                                    },
+                                    TileInStorage {
+                                        is_bomb_tile: false, 
+                                        explosion_start:explosion_start,
+                                        explosion_end:explosion_end
+                                    }
+                                );
+                                left_counter  = left_counter + 1;
+                            }
+                            let mut righ_counter = 0;
+                            while (righ_counter < 5) {
+                                storage.tiles.insert(
+                                    Position {
+                                        x: player.position.x + righ_counter,
+                                        y: player.position.y,
+                                    },
+                                    TileInStorage {
+                                        is_bomb_tile: false, 
+                                        explosion_start:explosion_start,
+                                        explosion_end:explosion_end
+                                    }
+                                );
+                                righ_counter  = righ_counter + 1;
+                            }
+                            
+                        },
+                    }
+                }
+
+                // storage.pla.insert(account, commitment);
+                //  let old_zone = _calculate_zone(player.position);
+                // let new_zone = _calculate_zone(new_position);
+                // let mut zone_list_index = player.zone_list_index;
+                // if old_zone != new_zone {
+                //     _remove_player_from_zone(old_zone, zone_list_index);
+                //     zone_list_index = _add_player_to_zone(account, new_zone);
+                // }
+
+                // // Update player in storage
+                // // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
+                // storage.players.insert(account, PlayerInStorage {
+                //     position: new_position,
+                //     time: time,
+                //     zone_list_index: zone_list_index,
+                //     life: player.life,
+                //     next_bomb: player.next_bomb
+                // });
+
+                commitment.epoch = 0; // used
+                storage.commitments.insert(account, commitment);
+            },
+            Option::None => {
+                // This should never happen
+                panic GameError::PlayerNotIn;
+            },
+        }
+        
     }
-
-    // #[storage(write, read)]
-    // fn move(new_position: Position, i: u64) {
-    //     let account = msg_sender().unwrap();
-    //     let time = _time();
-
-    //     match _get_player(account, time) {
-    //         Option::Some(player) => {
-
-               
-    //             if player.life  == 0 {
-    //                 panic GameError::PlayerIsDead;
-    //             }
-
-    //             if player.time >= time {
-    //                 // we do not error, we just return early
-    //                 // panic GameError::PlayerAlreadyMoved;
-    //                 return;
-    //             }
-
-                
-    //             match _get_tile(new_position) {
-    //                 Option::Some(tile) => {
-    //                     if tile.is_bomb_tile && tile.explosion_end > time {
-    //                         panic GameError::BombAlreadyThere
-    //                     } else {
-
-    //                     }
-    //                 },
-    //                 Option::None => {},
-    //             }
-
-    //             let old_zone = _calculate_zone(player.position);
-    //             let new_zone = _calculate_zone(new_position);
-
-    //             let mut zone_list_index = player.zone_list_index;
-    //             if old_zone != new_zone {
-    //                 _remove_player_from_zone(old_zone, zone_list_index);
-    //                 zone_list_index = _add_player_to_zone(account, new_zone);
-    //             }
-                
-    //             // Update player in storage
-    //             // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
-    //             storage.players.insert(account, PlayerInStorage {
-    //                 position: new_position,
-    //                 time: time,
-    //                 zone_list_index: zone_list_index,
-    //                 life: player.life,
-    //                 next_bomb: player.next_bomb
-    //             });
-
-    //             // TODO Event
-
-    //         },
-    //         Option::None => panic GameError::PlayerNotIn,
-    //     }
-    // }
-
-
-    //  #[storage(write, read)]
-    // fn place_bomb() {
-    //     let account = msg_sender().unwrap();
-    //     let time = _time();
-    //     match _get_player(account, time) {
-    //         Option::Some(player) => {
-
-    //             if player.life  == 0 {
-    //                 panic GameError::PlayerIsDead;
-    //             }
-
-    //             match _get_tile(player.position) {
-    //                 Option::Some(tile) => {
-    //                     if tile.is_bomb_tile && tile.explosion_end > time {
-    //                         panic GameError::BombAlreadyThere
-    //                     } else {
-
-    //                     }
-    //                 },
-    //                 Option::None => {
-
-    //                 },
-    //             }
-
-
-    //             _add_bomb_to_zone(player.position, _calculate_zone(player.position));
-    //             let explosion_start = time + 10 ; 
-    //             let explosion_end = explosion_start + 3;
-    //             storage.tiles.insert(
-    //                 player.position,
-    //                 TileInStorage {
-    //                     is_bomb_tile: true,
-    //                     explosion_start:explosion_start,
-    //                     explosion_end:explosion_end
-    //                 }
-    //             );
-    //             let mut down_counter = 0;
-    //             while (down_counter < 5) {
-    //                 storage.tiles.insert(
-    //                     Position {
-    //                         x: player.position.x,
-    //                         y: player.position.y + down_counter,
-    //                     },
-    //                     TileInStorage {
-    //                         is_bomb_tile: false, 
-    //                         explosion_start:explosion_start,
-    //                         explosion_end:explosion_end
-    //                     }
-    //                 );
-    //                 down_counter  = down_counter + 1;
-    //             }
-    //             let mut up_counter = 0;
-    //             while (up_counter < 5) {
-    //                 storage.tiles.insert(
-    //                     Position {
-    //                         x: player.position.x,
-    //                         y: player.position.y - up_counter,
-    //                     },
-    //                     TileInStorage {
-    //                         is_bomb_tile: false, 
-    //                         explosion_start:explosion_start,
-    //                         explosion_end:explosion_end
-    //                     }
-    //                 );
-    //                 up_counter  = up_counter + 1;
-    //             }
-    //             let mut left_counter = 0;
-    //             while (left_counter < 5) {
-    //                 storage.tiles.insert(
-    //                     Position {
-    //                         x: player.position.x - left_counter,
-    //                         y: player.position.y,
-    //                     },
-    //                     TileInStorage {
-    //                         is_bomb_tile: false, 
-    //                         explosion_start:explosion_start,
-    //                         explosion_end:explosion_end
-    //                     }
-    //                 );
-    //                 left_counter  = left_counter + 1;
-    //             }
-    //             let mut righ_counter = 0;
-    //             while (righ_counter < 5) {
-    //                 storage.tiles.insert(
-    //                     Position {
-    //                         x: player.position.x + righ_counter,
-    //                         y: player.position.y,
-    //                     },
-    //                     TileInStorage {
-    //                         is_bomb_tile: false, 
-    //                         explosion_start:explosion_start,
-    //                         explosion_end:explosion_end
-    //                     }
-    //                 );
-    //                 righ_counter  = righ_counter + 1;
-    //             }
-    //         },
-    //         Option::None => panic GameError::PlayerNotIn,
-    //     }
-    // }
 
     #[storage(read)]
     fn position(account: Identity) -> Option<Position> {
@@ -680,11 +637,14 @@ impl Game for Contract {
     }
 
     #[storage(read)]
-    fn get_zones(zones: Vec<u64>, time_provided: u64) -> ZonesInfo {
-        let actual_time = _time();
-        let mut time = actual_time;
-        if time_provided > 0 {
-            time = time_provided
+    fn get_zones(zones: Vec<u64>, epoch_provided: u64) -> ZonesInfo {
+        let (actual_epoch, commiting, _time) = _epoch();
+
+
+       
+        let mut epoch = actual_epoch;
+        if epoch_provided > 0 {
+            epoch = epoch_provided
         }
         let mut list_of_entity_list: Vec<Vec<Entity>> = Vec::new();
         for zone in zones.iter() {
@@ -696,14 +656,12 @@ impl Game for Contract {
                 let link = zone_entity_list.get(counter).unwrap().try_read().unwrap();
                 match link {
                     Link::Player(account) => {
-                        let player = _get_player(account, time).unwrap();
+                        let player = _get_player(account, epoch).unwrap();
                         list_of_entities.push(Entity::Player(Player {
                             account: account,
                             position: player.position,
                             life: player.life,
-                            time: player.time,
-                            next_bomb: player.next_bomb
-                        }));
+                            epoch: player.epoch                        }));
                     },
                     Link::Tile(tile_position) => {
                         let tile = _get_tile(tile_position).unwrap();
@@ -721,7 +679,6 @@ impl Game for Contract {
             list_of_entity_list.push(list_of_entities);
         }
         ZonesInfo {
-            time: actual_time,
             zones: list_of_entity_list,
         }
     }

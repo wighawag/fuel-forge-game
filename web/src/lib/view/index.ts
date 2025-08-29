@@ -39,7 +39,7 @@ export const viewState = derived(
 			entities[player.id] = player;
 		}
 
-		console.log(player);
+		// console.log(player);
 
 		return {
 			entities,

@@ -69,7 +69,7 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 							y: player.position.y.toNumber() - (1 << 30)
 						},
 						life: player.life.toNumber(),
-						time: player.time.toNumber()
+						epoch: player.epoch.toNumber()
 					} as const;
 					state.entities[id] = entity;
 					if (id == wallet.address.toAddress()) {

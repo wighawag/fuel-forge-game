@@ -1,13 +1,15 @@
 import { get, writable } from 'svelte/store';
 import { onchainState } from '.';
 import { createAutoSubmitter } from '$lib/onchain/auto-submit';
+import { writes } from '$lib/onchain/writes';
+import { Hasher } from 'fuel-ts-hasher';
+import { localComputer, time, wallet } from '$lib/connection';
 
 export type LocalAction = { type: 'move'; x: number; y: number } | { type: 'placeBomb' };
 export type LocalState = {
 	actions: LocalAction[];
 	submission?: {
 		commit: {
-			hash: string;
 			secret: string;
 			epoch: number;
 			txHash: string;
@@ -71,9 +73,54 @@ export const localState = {
 		_localState.set($state);
 	},
 
-	async commit() {},
+	async commit() {
+		const epochInfo = localComputer.calculateEpochInfo(time.now());
+		const { currentEpoch: epoch } = epochInfo;
+		console.log(`commiting for epoch ${epoch}...`);
 
-	async reveal() {}
+		// TODO
+		const secret = '0x0000000000000000000000000000000000000000000000000000000000000001';
+
+		const { transactionID, wait } = await writes.commit_actions(secret, $state.actions);
+
+		$state.submission = {
+			commit: {
+				epoch,
+				secret,
+				txHash: transactionID
+			}
+		};
+		_localState.set($state);
+
+		await wait();
+	},
+
+	async reveal() {
+		const epochInfo = localComputer.calculateEpochInfo(time.now());
+		const { currentEpoch: epoch } = epochInfo;
+		console.log(`revealing for epoch ${epoch}...`);
+
+		const commitment = $state.submission?.commit;
+		if (!commitment) {
+			throw new Error(`cannot reveal without commitment info`);
+		}
+		const { transactionID, wait } = await writes.reveal_actions(
+			wallet.address.toAddress(),
+			commitment.secret,
+			$state.actions
+		);
+
+		$state.submission = {
+			commit: commitment,
+			reveal: {
+				epoch,
+				txHash: transactionID
+			}
+		};
+		_localState.set($state);
+
+		await wait();
+	}
 };
 
 export const autoSubmitter = createAutoSubmitter();

@@ -4,7 +4,7 @@ export type Entity = { id: string; position: { x: number; y: number } } & (
 	| {
 			type: 'player';
 			life: number;
-			time: number;
+			epoch: number;
 	  }
 	| {
 			type: 'bomb';

@@ -4,7 +4,7 @@ import { viewState } from '$lib/view';
 import { BitmapText, Container, Graphics, Sprite } from 'pixi.js';
 import type { Readable } from 'svelte/store';
 import { LoadingSprite } from './LoadingSprite';
-import { time, wallet } from '$lib/connection';
+import { localComputer, time, wallet } from '$lib/connection';
 import { LoadingBitmapText } from './LoadingBtimapText';
 
 export function createRenderer(viewState: Readable<OnchainState>) {
@@ -13,8 +13,8 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 
 	function onAppStarted(container: Container) {
 		unsubscribe = viewState.subscribe(($viewState) => {
-			const now = time.now();
-			// console.log(`now: ${new Date(now * 1000)} / ${new Date($viewState.time.value * 1000)}`);
+			const epochInfo = localComputer.calculateEpochInfo(time.now());
+			const { currentEpoch: epoch } = epochInfo;
 			const processed = new Set();
 
 			function onEntityAdded(id: string, entity: Entity): Container {
@@ -106,6 +106,11 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 				displayObject.y = 10 * entity.position.y;
 
 				if (entity.type === 'player') {
+					if (entity.epoch > epoch) {
+						displayObject.alpha = 0.2;
+					} else {
+						displayObject.alpha = 1;
+					}
 					if (entity.life == 0) {
 						displayObject.children[3].visible = true;
 					} else {
@@ -113,7 +118,7 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 					}
 
 					if (id == wallet.address.toAddress()) {
-						if (entity.time > time.now() - 0.9) {
+						if (entity.epoch > time.now() - 0.9) {
 							displayObject.children[1].visible = false;
 							displayObject.children[2].visible = true;
 						} else {
@@ -122,25 +127,23 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 						}
 					}
 				} else if (entity.type === 'bomb') {
-					if (entity.explosion_end < now) {
+					if (entity.explosion_end < epoch) {
 						displayObject.visible = false;
 					} else {
-						const secondsLeft = Math.floor(entity.explosion_start - now);
-						let t = '' + secondsLeft;
-						if (secondsLeft > 9) {
-							t = '9';
-						} else if (secondsLeft <= 0) {
+						const epochLeft = Math.floor(entity.explosion_start - epoch);
+						let t = '' + epochLeft;
+						if (epochLeft <= 0) {
 							t = '-';
 						}
 						// console.log({ secondsLeft });
-						if (secondsLeft >= 0) {
+						if (epochLeft >= 0) {
 							displayObject.children[3].visible = true;
 							(displayObject.children[3] as BitmapText).text = t;
 						} else {
 							displayObject.children[3].visible = false;
 						}
 
-						if (entity.explosion_start < now) {
+						if (entity.explosion_start < epochLeft) {
 							displayObject.children[1].visible = true;
 							displayObject.children[2].visible = true;
 						}

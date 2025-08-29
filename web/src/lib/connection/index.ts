@@ -1,10 +1,10 @@
 import { Provider, ScriptTransactionRequest, Wallet, type AccountCoinQuantity } from 'fuels';
 import { PUBLIC_FUEL_NODE_URL, PUBLIC_FAUCET_PRIVATE_KEY } from '$env/static/public';
 import { TestContract } from 'fuel-forge-game-onchain/generated';
-import { writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 
 let url = PUBLIC_FUEL_NODE_URL;
-let contractAddress = '0xb4f6477787f93a2ee387572ccd456952ceaecb2315ddac8f1a8dcd48af3ef548';
+let contractAddress = '0xe9f19aa706ce982be1c234ba93a1801228b05d3ed8685f05f25fe72924d85cc5';
 
 const useTestnet =
 	PUBLIC_FUEL_NODE_URL.indexOf('quiknode') != -1 ||
@@ -63,6 +63,11 @@ export async function requestFundFromFaucet() {
 	// The assembledRequest is now ready to be signed and sent
 	const submit = await faucetWallet.sendTransaction(assembledRequest);
 	await submit.waitForResult();
+
+	const before_fetch = performance.now();
+	const block = await provider.getBlock('latest');
+	const lastBlockTime = Number(convertTaiTime(block!.time));
+	time.updateTime(lastBlockTime, before_fetch);
 }
 
 function convertTaiTime(num: string) {
@@ -128,7 +133,7 @@ export function createLocalComputer(config: {
 }) {
 	function calculateEpochInfo(currentTime: number) {
 		const COMMIT_PHASE_DURATION = config.COMMIT_PHASE_DURATION;
-		const REVEAL_PHASE_DURATION = config.COMMIT_PHASE_DURATION;
+		const REVEAL_PHASE_DURATION = config.REVEAL_PHASE_DURATION;
 		const EPOCH_DURATION = COMMIT_PHASE_DURATION + REVEAL_PHASE_DURATION;
 		const START_TIME = config.START_TIME || 0;
 
@@ -174,7 +179,12 @@ export function createLocalComputer(config: {
 
 export const localComputer = createLocalComputer({
 	// TODO get it from Contract Data
-	COMMIT_PHASE_DURATION: 25,
-	REVEAL_PHASE_DURATION: 5,
+	COMMIT_PHASE_DURATION: 20,
+	REVEAL_PHASE_DURATION: 10,
 	START_TIME: 0
 });
+
+export const epochInfo = derived(time, (t) => localComputer.calculateEpochInfo(t.value));
+
+(globalThis as any).epochInfo = epochInfo;
+(globalThis as any).time = time;

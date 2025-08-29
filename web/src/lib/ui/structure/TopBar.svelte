@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { requestFundFromFaucet, time, wallet } from '$lib/connection/index.js';
+	import { epochInfo, requestFundFromFaucet, time, wallet } from '$lib/connection/index.js';
 	import { writes } from '$lib/onchain/writes';
 	import ImgBlockie from '$lib/ui/ethereum/ImgBlockie.svelte';
 
@@ -18,8 +18,12 @@
 >
 	<div class="flex h-full items-center space-x-2">
 		<!-- Logo or App Name -->
-		<button onclick={faucet} class="text-lg font-bold">{wallet.address.toAddress()}</button>
-		<span>{new Date($time * 1000)}</span>
+		<button onclick={faucet} class="text-lg font-bold">FAUCET</button>
+
+		<span
+			>{$epochInfo.isCommitPhase ? 'Commit' : 'Revealing...'}
+			{Math.floor($epochInfo.timeLeftInPhase * 100) / 100}</span
+		>
 	</div>
 	<div class="relative flex h-full items-center space-x-4">
 		<div class="flex h-full items-center space-x-2">

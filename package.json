@@ -7,7 +7,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "patchedDependencies": {
+      "@fuel-ts/account": "patches/@fuel-ts__account.patch"
+    }
   },
   "devDependencies": {
     "ldenv": "^0.3.12",

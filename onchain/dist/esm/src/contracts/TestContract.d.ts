@@ -26,7 +26,8 @@ export declare enum GameErrorInput {
     InRevealPhase = "InRevealPhase",
     InCommitmentPhase = "InCommitmentPhase",
     NothingToReveal = "NothingToReveal",
-    InvalidEpoch = "InvalidEpoch"
+    InvalidEpoch = "InvalidEpoch",
+    PlayerNeedsToWait = "PlayerNeedsToWait"
 }
 export declare enum GameErrorOutput {
     PlayerAlreadyIn = "PlayerAlreadyIn",
@@ -37,7 +38,8 @@ export declare enum GameErrorOutput {
     InRevealPhase = "InRevealPhase",
     InCommitmentPhase = "InCommitmentPhase",
     NothingToReveal = "NothingToReveal",
-    InvalidEpoch = "InvalidEpoch"
+    InvalidEpoch = "InvalidEpoch",
+    PlayerNeedsToWait = "PlayerNeedsToWait"
 }
 export type IdentityInput = Enum<{
     Address: AddressInput;
@@ -80,16 +82,14 @@ export type ContractIdOutput = ContractIdInput;
 export type PlayerInput = {
     account: IdentityInput;
     position: PositionInput;
-    time: BigNumberish;
+    epoch: BigNumberish;
     life: BigNumberish;
-    next_bomb: BigNumberish;
 };
 export type PlayerOutput = {
     account: IdentityOutput;
     position: PositionOutput;
-    time: BN;
+    epoch: BN;
     life: BN;
-    next_bomb: BN;
 };
 export type PositionInput = {
     x: BigNumberish;
@@ -100,11 +100,9 @@ export type PositionOutput = {
     y: BN;
 };
 export type ZonesInfoInput = {
-    time: BigNumberish;
     zones: Vec<Vec<EntityInput>>;
 };
 export type ZonesInfoOutput = {
-    time: BN;
     zones: Vec<Vec<EntityOutput>>;
 };
 export declare class TestContractInterface extends Interface {
@@ -181,11 +179,7 @@ export declare class TestContract extends __Contract {
         } | {
             type: string;
             metadataTypeId: number;
-            components: ({
-                name: string;
-                typeId: string;
-                typeArguments?: undefined;
-            } | {
+            components: {
                 name: string;
                 typeId: number;
                 typeArguments: {
@@ -196,7 +190,7 @@ export declare class TestContract extends __Contract {
                         typeId: number;
                     }[];
                 }[];
-            })[];
+            }[];
             typeParameters?: undefined;
         } | {
             type: string;
@@ -312,6 +306,36 @@ export declare class TestContract extends __Contract {
                 logId: string;
                 msg: null;
             };
+            "18446744069414584327": {
+                pos: {
+                    pkg: string;
+                    file: string;
+                    line: number;
+                    column: number;
+                };
+                logId: string;
+                msg: null;
+            };
+            "18446744069414584328": {
+                pos: {
+                    pkg: string;
+                    file: string;
+                    line: number;
+                    column: number;
+                };
+                logId: string;
+                msg: null;
+            };
+            "18446744069414584329": {
+                pos: {
+                    pkg: string;
+                    file: string;
+                    line: number;
+                    column: number;
+                };
+                logId: string;
+                msg: null;
+            };
         };
     };
     static readonly storageSlots: StorageSlot[];
@@ -321,7 +345,7 @@ export declare class TestContract extends __Contract {
         commit_actions: InvokeFunction<[hash: string], void>;
         enter: InvokeFunction<[], void>;
         get_time: InvokeFunction<[], BN>;
-        get_zones: InvokeFunction<[zones: Vec<BigNumberish>, time_provided: BigNumberish], ZonesInfoOutput>;
+        get_zones: InvokeFunction<[zones: Vec<BigNumberish>, epoch_provided: BigNumberish], ZonesInfoOutput>;
         identity: InvokeFunction<[], IdentityOutput>;
         increase_time: InvokeFunction<[seconds: BigNumberish], void>;
         position: InvokeFunction<[account: IdentityInput], Option<PositionOutput>>;

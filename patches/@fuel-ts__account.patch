@@ -1,0 +1,37 @@
+diff --git a/dist/test-utils.js b/dist/test-utils.js
+index 296ed5b1ac02adf19e73d557a6de7082a1ac69c2..b620ad0cd438c5e747fc51fcd0aeb2f7d96b56df 100644
+--- a/dist/test-utils.js
++++ b/dist/test-utils.js
+@@ -301,16 +301,14 @@ var launchNode = /* @__PURE__ */ __name(async ({
+       snapshotDirToUse = tempDir;
+     }
+     const { spawn } = await import("child_process");
+-    const child = spawn(
+-      command,
+-      [
++    const commandArgs = [
+         "run",
+         ["--ip", ipToUse],
+         ["--port", portToUse],
+         useInMemoryDb ? ["--db-type", "in-memory"] : ["--db-path", tempDir],
+         ["--min-gas-price", minGasPrice],
+         ["--starting-gas-price", startingGasPrice],
+-        poaInstant ? ["--poa-instant", "true"] : [],
++        ["--poa-interval-period", "1sec"],
+         ["--native-executor-version", nativeExecutorVersion],
+         ["--consensus-key", consensusKey],
+         ["--snapshot", snapshotDirToUse],
+@@ -318,7 +316,12 @@ var launchNode = /* @__PURE__ */ __name(async ({
+         "--utxo-validation",
+         "--debug",
+         ...remainingArgs
+-      ].flat(),
++      ].flat();
++
++    console.log(`${command} ${commandArgs.join(' ')}`);
++    const child = spawn(
++      command,
++      commandArgs,
+       { stdio: "pipe", detached: true }
+     );
+     if (loggingEnabled) {

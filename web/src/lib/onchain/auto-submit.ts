@@ -4,9 +4,13 @@ import { localState } from '$lib/view/localState';
 export function createAutoSubmitter() {
 	function start() {
 		return time.subscribe(($time) => {
+			const localData = localState.value;
+			if (localData.actions.length == 0) {
+				return;
+			}
+
 			const epochInfo = localComputer.calculateEpochInfo($time.value);
 
-			const localData = localState.value;
 			if (epochInfo.isCommitPhase) {
 				if (epochInfo.timeLeftForCommitEnd < 5) {
 					if (!localData.submission || localData.submission.commit.epoch < epochInfo.currentEpoch) {
@@ -18,13 +22,19 @@ export function createAutoSubmitter() {
 					// still time for player to setup its move
 				}
 			} else {
-				if (
-					!localData.submission?.reveal ||
-					localData.submission.reveal.epoch < epochInfo.currentEpoch
-				) {
-					localState.reveal();
-				} else {
-					// already submiited
+				// TODO remove
+				if (epochInfo.timeLeftForRevealEnd > 7) {
+					return;
+				}
+				if (localData.submission && localData.submission.commit.epoch == epochInfo.currentEpoch) {
+					if (
+						!localData.submission.reveal ||
+						localData.submission.reveal.epoch < epochInfo.currentEpoch
+					) {
+						localState.reveal();
+					} else {
+						// already submiited
+					}
 				}
 			}
 		});

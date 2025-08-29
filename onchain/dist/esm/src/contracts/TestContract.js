@@ -19,6 +19,7 @@ export var GameErrorInput;
     GameErrorInput["InCommitmentPhase"] = "InCommitmentPhase";
     GameErrorInput["NothingToReveal"] = "NothingToReveal";
     GameErrorInput["InvalidEpoch"] = "InvalidEpoch";
+    GameErrorInput["PlayerNeedsToWait"] = "PlayerNeedsToWait";
 })(GameErrorInput || (GameErrorInput = {}));
 ;
 export var GameErrorOutput;
@@ -32,6 +33,7 @@ export var GameErrorOutput;
     GameErrorOutput["InCommitmentPhase"] = "InCommitmentPhase";
     GameErrorOutput["NothingToReveal"] = "NothingToReveal";
     GameErrorOutput["InvalidEpoch"] = "InvalidEpoch";
+    GameErrorOutput["PlayerNeedsToWait"] = "PlayerNeedsToWait";
 })(GameErrorOutput || (GameErrorOutput = {}));
 ;
 const abi = {
@@ -46,10 +48,6 @@ const abi = {
         {
             "type": "b256",
             "concreteTypeId": "7c5ee1cecf5f8eacd1284feb5f0bf2bdea533a51e2f0c9aabe9236d335989f3b"
-        },
-        {
-            "type": "bool",
-            "concreteTypeId": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903"
         },
         {
             "type": "enum Action",
@@ -73,10 +71,6 @@ const abi = {
             "typeArguments": [
                 "5b037ac383fc71c3a4b2c49570d83501d3a1291a96a114187813301543541da8"
             ]
-        },
-        {
-            "type": "str",
-            "concreteTypeId": "8c25cb3686462e9a86d2883c5688a22fe738b0bbc85f458d2d2b5f3f667c6d5a"
         },
         {
             "type": "struct CommitmentSubmitted",
@@ -191,6 +185,11 @@ const abi = {
                     "name": "InvalidEpoch",
                     "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
                     "errorMessage": "Invalid Epoch"
+                },
+                {
+                    "name": "PlayerNeedsToWait",
+                    "typeId": "2e38e77b22c314a449e91fafed92a43826ac6aa403ae6a8acb6cf58239fbaf5d",
+                    "errorMessage": "Player needs to wait"
                 }
             ]
         },
@@ -286,15 +285,11 @@ const abi = {
                     "typeId": 10
                 },
                 {
-                    "name": "time",
+                    "name": "epoch",
                     "typeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
                 },
                 {
                     "name": "life",
-                    "typeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
-                },
-                {
-                    "name": "next_bomb",
                     "typeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
                 }
             ]
@@ -317,10 +312,6 @@ const abi = {
             "type": "struct ZonesInfo",
             "metadataTypeId": 11,
             "components": [
-                {
-                    "name": "time",
-                    "typeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
-                },
                 {
                     "name": "zones",
                     "typeId": 15,
@@ -466,7 +457,7 @@ const abi = {
                     "concreteTypeId": "d5bfe1d4e1ace20166c9b50cadd47e862020561bde24f5189cfc2723f5ed76f4"
                 },
                 {
-                    "name": "time_provided",
+                    "name": "epoch_provided",
                     "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
                 }
             ],
@@ -553,20 +544,12 @@ const abi = {
     ],
     "loggedTypes": [
         {
-            "logId": "10098701174489624218",
-            "concreteTypeId": "8c25cb3686462e9a86d2883c5688a22fe738b0bbc85f458d2d2b5f3f667c6d5a"
+            "logId": "6351998143957377005",
+            "concreteTypeId": "5826d4a858851fed1f0bdf9fec8c6ef8cde309190274786923e4ebc123bb37fc"
         },
         {
             "logId": "1515152261580153489",
             "concreteTypeId": "1506e6f44c1d6291cdf46395a8e573276a4fa79e8ace3fc891e092ef32d1b0a0"
-        },
-        {
-            "logId": "13213829929622723620",
-            "concreteTypeId": "b760f44fa5965c2474a3b471467a22c43185152129295af588b022ae50b50903"
-        },
-        {
-            "logId": "6351998143957377005",
-            "concreteTypeId": "5826d4a858851fed1f0bdf9fec8c6ef8cde309190274786923e4ebc123bb37fc"
         },
         {
             "logId": "5817999277258129440",
@@ -580,7 +563,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 455,
+                "line": 438,
                 "column": 13
             },
             "logId": "6351998143957377005",
@@ -590,8 +573,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 465,
-                "column": 13
+                "line": 446,
+                "column": 21
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -600,7 +583,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 407,
+                "line": 450,
                 "column": 21
             },
             "logId": "6351998143957377005",
@@ -610,8 +593,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 488,
-                "column": 13
+                "line": 453,
+                "column": 29
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -620,8 +603,8 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 496,
-                "column": 13
+                "line": 407,
+                "column": 21
             },
             "logId": "6351998143957377005",
             "msg": null
@@ -630,7 +613,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 499,
+                "line": 484,
                 "column": 13
             },
             "logId": "6351998143957377005",
@@ -640,8 +623,38 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 262,
+                "line": 492,
+                "column": 13
+            },
+            "logId": "6351998143957377005",
+            "msg": null
+        },
+        "18446744069414584327": {
+            "pos": {
+                "pkg": "test-contract",
+                "file": "src/main.sw",
+                "line": 495,
+                "column": 13
+            },
+            "logId": "6351998143957377005",
+            "msg": null
+        },
+        "18446744069414584328": {
+            "pos": {
+                "pkg": "test-contract",
+                "file": "src/main.sw",
+                "line": 261,
                 "column": 9
+            },
+            "logId": "6351998143957377005",
+            "msg": null
+        },
+        "18446744069414584329": {
+            "pos": {
+                "pkg": "test-contract",
+                "file": "src/main.sw",
+                "line": 625,
+                "column": 17
             },
             "logId": "6351998143957377005",
             "msg": null

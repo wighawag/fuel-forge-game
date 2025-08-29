@@ -27,6 +27,7 @@
   "scripts": {
     "dev": "node delete_proxy_address.js && fuels dev",
     "fuel-core": "node delete_proxy_address.js && fuels node",
+    "TODO": "fuel-core run --poa-interval-period 1sec",
     "contracts:dev": "as-soon -w contract/src pnpm build:deploy",
     "test": "as-soon -w contract/src forc test",
     "build:deploy": "fuels build && pnpm typescript && fuels deploy",
