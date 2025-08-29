@@ -1,4 +1,4 @@
-import { time, wallet } from '$lib/connection';
+import { localComputer, time, wallet } from '$lib/connection';
 import { createDirectReadStore } from '$lib/onchain/direct-read';
 import type {
 	BaseEntity,
@@ -26,13 +26,15 @@ export const onchainState = createDirectReadStore(camera);
 export const viewState = derived(
 	[onchainState, localState],
 	([$onchainState, $localState]): ViewState => {
+		const now = time.now(); // we use now  instead of deriving from time
+		const { currentEpoch: epoch } = localComputer.calculateEpochInfo(now);
 		const playerID = wallet.address.toAddress();
 		const onchain_player = $onchainState.entities[playerID] as PlayerEntity | undefined;
 		const entities = { ...$onchainState.entities } as { [id: string]: ViewEntity };
 		if (onchain_player) {
 			let current_position = { ...onchain_player.position };
 			const path: Position[] = [];
-			if ($localState.actions.length > 0) {
+			if ($localState.actions.length > 0 && $localState.epoch == epoch) {
 				for (const action of $localState.actions) {
 					path.push(current_position);
 					if (action.type === 'move') {
@@ -44,8 +46,8 @@ export const viewState = derived(
 							type: 'bomb',
 							id: bombID,
 							position: current_position,
-							explosion_start: time.now() + 1,
-							explosion_end: time.now() + 1
+							explosion_start: epoch + 1,
+							explosion_end: epoch + 1
 						};
 					}
 				}

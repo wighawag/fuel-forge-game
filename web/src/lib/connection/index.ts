@@ -179,8 +179,8 @@ export function createLocalComputer(config: {
 
 export const localComputer = createLocalComputer({
 	// TODO get it from Contract Data
-	COMMIT_PHASE_DURATION: 20,
-	REVEAL_PHASE_DURATION: 10,
+	COMMIT_PHASE_DURATION: 13,
+	REVEAL_PHASE_DURATION: 4,
 	START_TIME: 0
 });
 

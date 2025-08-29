@@ -1,3 +1,4 @@
+import { localComputer, time } from '$lib/connection';
 import { localState } from '$lib/view/localState';
 interface KeyboardController {
 	start: () => void;
@@ -25,6 +26,16 @@ export function createKeyboardController(): KeyboardController {
 	}
 
 	function keydownHandler(event: KeyboardEvent) {
+		const now = time.now();
+		const {
+			currentEpoch: epoch,
+			isCommitPhase,
+			timeLeftInPhase
+		} = localComputer.calculateEpochInfo(now);
+
+		if (!isCommitPhase || timeLeftInPhase < 3.1) {
+			return;
+		}
 		switch (event.key) {
 			// Arrow keys
 			case 'ArrowUp':

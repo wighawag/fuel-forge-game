@@ -12,7 +12,7 @@ export function createAutoSubmitter() {
 			const epochInfo = localComputer.calculateEpochInfo($time.value);
 
 			if (epochInfo.isCommitPhase) {
-				if (epochInfo.timeLeftForCommitEnd < 5) {
+				if (epochInfo.timeLeftForCommitEnd < 3) {
 					if (!localData.submission || localData.submission.commit.epoch < epochInfo.currentEpoch) {
 						localState.commit();
 					} else {

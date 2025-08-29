@@ -11,6 +11,13 @@
 		const result = await requestFundFromFaucet();
 		console.log(result);
 	}
+
+	let timeLeft = $derived(
+		Math.floor(
+			$epochInfo.isCommitPhase ? $epochInfo.timeLeftInPhase - 3 : $epochInfo.timeLeftInPhase
+		)
+	);
+	let timeLeftString = $derived(timeLeft <= 0 ? '-' : '' + timeLeft);
 </script>
 
 <nav
@@ -22,7 +29,7 @@
 
 		<span
 			>{$epochInfo.isCommitPhase ? 'Commit' : 'Revealing...'}
-			{Math.floor($epochInfo.timeLeftInPhase * 100) / 100}</span
+			{timeLeftString}</span
 		>
 	</div>
 	<div class="relative flex h-full items-center space-x-4">

@@ -193,8 +193,8 @@ storage {
 // CONSTANTS AND CONFIGURABLES
 // ----------------------------------------------------------------------------
 const ENTRANCE = Position {x: 1 << 30, y: 1 << 30}; // Start somwhere high enough
-const COMMIT_PHASE_DURATION: u64 = 20;
-const REVEAL_PHASE_DURATION: u64 = 10;
+const COMMIT_PHASE_DURATION: u64 = 13;
+const REVEAL_PHASE_DURATION: u64 = 4;
 const START_TIME: u64 = 0;
 // ----------------------------------------------------------------------------
 
@@ -527,7 +527,7 @@ impl Game for Contract {
                             let explosion_start = epoch + 1 ; 
                             let explosion_end = explosion_start + 0;
                             storage.tiles.insert(
-                                player.position,
+                                new_position,
                                 TileInStorage {
                                     is_bomb_tile: true,
                                     explosion_start:explosion_start,
