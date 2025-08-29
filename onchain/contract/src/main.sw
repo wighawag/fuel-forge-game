@@ -523,7 +523,7 @@ impl Game for Contract {
                             }
                             bomb_counter = bomb_counter + 1;
 
-                            _add_bomb_to_zone(player.position, _calculate_zone(player.position));
+                            _add_bomb_to_zone(new_position, _calculate_zone(new_position));
                             let explosion_start = epoch + 1 ; 
                             let explosion_end = explosion_start + 0;
                             storage.tiles.insert(
@@ -538,8 +538,8 @@ impl Game for Contract {
                             while (down_counter < 5) {
                                 storage.tiles.insert(
                                     Position {
-                                        x: player.position.x,
-                                        y: player.position.y + down_counter,
+                                        x: new_position.x,
+                                        y: new_position.y + down_counter,
                                     },
                                     TileInStorage {
                                         is_bomb_tile: false, 
@@ -553,8 +553,8 @@ impl Game for Contract {
                             while (up_counter < 5) {
                                 storage.tiles.insert(
                                     Position {
-                                        x: player.position.x,
-                                        y: player.position.y - up_counter,
+                                        x: new_position.x,
+                                        y: new_position.y - up_counter,
                                     },
                                     TileInStorage {
                                         is_bomb_tile: false, 
@@ -568,8 +568,8 @@ impl Game for Contract {
                             while (left_counter < 5) {
                                 storage.tiles.insert(
                                     Position {
-                                        x: player.position.x - left_counter,
-                                        y: player.position.y,
+                                        x: new_position.x - left_counter,
+                                        y: new_position.y,
                                     },
                                     TileInStorage {
                                         is_bomb_tile: false, 
@@ -583,8 +583,8 @@ impl Game for Contract {
                             while (righ_counter < 5) {
                                 storage.tiles.insert(
                                     Position {
-                                        x: player.position.x + righ_counter,
-                                        y: player.position.y,
+                                        x: new_position.x + righ_counter,
+                                        y: new_position.y,
                                     },
                                     TileInStorage {
                                         is_bomb_tile: false, 
