@@ -653,7 +653,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 625,
+                "line": 624,
                 "column": 17
             },
             "logId": "6351998143957377005",

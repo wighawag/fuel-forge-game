@@ -508,12 +508,12 @@ impl Game for Contract {
                 }
 
                 let mut bomb_counter = 0;
-                let mut current_position = Position {x: player.position.x, y: player.position.y};
+                let mut new_position = Position {x: player.position.x, y: player.position.y};
                 for action in actions.iter() {
                     match action {
                         Action::Move(position) => {
                             // TODO checks
-                            current_position = position;
+                            new_position = position;
                         },
                         Action::PlaceBomb => {
                             if bomb_counter > 0 {
@@ -598,24 +598,23 @@ impl Game for Contract {
                     }
                 }
 
-                // storage.pla.insert(account, commitment);
-                //  let old_zone = _calculate_zone(player.position);
-                // let new_zone = _calculate_zone(new_position);
-                // let mut zone_list_index = player.zone_list_index;
-                // if old_zone != new_zone {
-                //     _remove_player_from_zone(old_zone, zone_list_index);
-                //     zone_list_index = _add_player_to_zone(account, new_zone);
-                // }
+                
+                let old_zone = _calculate_zone(player.position);
+                let new_zone = _calculate_zone(new_position);
+                let mut zone_list_index = player.zone_list_index;
+                if old_zone != new_zone {
+                    _remove_player_from_zone(old_zone, zone_list_index);
+                    zone_list_index = _add_player_to_zone(account, new_zone);
+                }
 
-                // // Update player in storage
-                // // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
-                // storage.players.insert(account, PlayerInStorage {
-                //     position: new_position,
-                //     time: time,
-                //     zone_list_index: zone_list_index,
-                //     life: player.life,
-                //     next_bomb: player.next_bomb
-                // });
+                // Update player in storage
+                // TODO: we recreate a copy as we could not get a mut ref from Option::Some(player)
+                storage.players.insert(account, PlayerInStorage {
+                    position: new_position,
+                    epoch: epoch,
+                    zone_list_index: zone_list_index,
+                    life: player.life
+                });
 
                 commitment.epoch = 0; // used
                 storage.commitments.insert(account, commitment);
