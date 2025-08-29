@@ -125,7 +125,6 @@ export function createRenderer(viewState: Readable<ViewState>) {
 						pathDisplayObject.removeChildren();
 
 						const path = entity.path;
-						// TODO path.epoch
 						if (path) {
 							for (const pos of path) {
 								const graphics = new Graphics();
@@ -133,7 +132,6 @@ export function createRenderer(viewState: Readable<ViewState>) {
 								graphics.x = 10 * pos.x;
 								graphics.y = 10 * pos.y;
 							}
-							console.log(`after: ${pathDisplayObject.children.length}`);
 						}
 
 						if (entity.epoch > time.now() - 0.9) {

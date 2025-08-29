@@ -39,7 +39,7 @@ export class LoadingBitmapText extends Container {
 	}
 
 	onLoaded(t: any) {
-		console.log(`loaded`, t);
+		// console.log(`loaded`, t);
 		const bitmapText = new BitmapText(this.config);
 		this.addChild(bitmapText);
 	}

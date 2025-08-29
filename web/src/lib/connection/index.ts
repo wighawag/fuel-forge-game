@@ -15,12 +15,6 @@ if (useTestnet) {
 
 export const provider = new Provider(url);
 
-const new_privateKey = Wallet.generate();
-console.log({
-	address: new_privateKey.address.toAddress(),
-	privateKey: new_privateKey.privateKey
-});
-
 const LOCAL_STORAGE_KEY_PRIVATE_KEY = '__private_key__';
 let privateKey = localStorage.getItem(LOCAL_STORAGE_KEY_PRIVATE_KEY);
 if (!privateKey) {
