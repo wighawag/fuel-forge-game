@@ -326,16 +326,6 @@ export declare class TestContract extends __Contract {
                 logId: string;
                 msg: null;
             };
-            "18446744069414584329": {
-                pos: {
-                    pkg: string;
-                    file: string;
-                    line: number;
-                    column: number;
-                };
-                logId: string;
-                msg: null;
-            };
         };
     };
     static readonly storageSlots: StorageSlot[];

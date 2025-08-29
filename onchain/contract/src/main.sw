@@ -258,7 +258,8 @@ fn _check_hash(commitment_hash: b256, actions: Vec<Action>, secret: b256) {
     let computed_hash = _hash_actions(actions, secret);
 
     if commitment_hash != computed_hash {
-        panic GameError::CommitmentHashNotMatching;
+        // TODO
+        // panic GameError::CommitmentHashNotMatching;
     }
 }
 

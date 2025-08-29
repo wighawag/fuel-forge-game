@@ -563,7 +563,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 438,
+                "line": 439,
                 "column": 13
             },
             "logId": "6351998143957377005",
@@ -573,7 +573,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 446,
+                "line": 447,
                 "column": 21
             },
             "logId": "6351998143957377005",
@@ -583,7 +583,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 450,
+                "line": 451,
                 "column": 21
             },
             "logId": "6351998143957377005",
@@ -593,7 +593,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 453,
+                "line": 454,
                 "column": 29
             },
             "logId": "6351998143957377005",
@@ -603,7 +603,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 407,
+                "line": 408,
                 "column": 21
             },
             "logId": "6351998143957377005",
@@ -613,7 +613,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 484,
+                "line": 485,
                 "column": 13
             },
             "logId": "6351998143957377005",
@@ -623,7 +623,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 492,
+                "line": 493,
                 "column": 13
             },
             "logId": "6351998143957377005",
@@ -633,7 +633,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 495,
+                "line": 496,
                 "column": 13
             },
             "logId": "6351998143957377005",
@@ -643,17 +643,7 @@ const abi = {
             "pos": {
                 "pkg": "test-contract",
                 "file": "src/main.sw",
-                "line": 261,
-                "column": 9
-            },
-            "logId": "6351998143957377005",
-            "msg": null
-        },
-        "18446744069414584329": {
-            "pos": {
-                "pkg": "test-contract",
-                "file": "src/main.sw",
-                "line": 624,
+                "line": 625,
                 "column": 17
             },
             "logId": "6351998143957377005",
