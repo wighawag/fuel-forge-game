@@ -1,8 +1,7 @@
 import { get, writable } from 'svelte/store';
-import { onchainState } from '.';
+import { onchainState, viewState } from '.';
 import { createAutoSubmitter } from '$lib/onchain/auto-submit';
 import { writes } from '$lib/onchain/writes';
-import { Hasher } from 'fuel-ts-hasher';
 import { localComputer, time, wallet } from '$lib/connection';
 
 export type LocalAction = { type: 'move'; x: number; y: number } | { type: 'placeBomb' };
@@ -19,11 +18,16 @@ export type LocalState = {
 			txHash: string;
 		};
 	};
+	epoch: number;
 };
 
-const $state: LocalState = {
-	actions: []
-};
+function defaultState() {
+	return {
+		actions: [],
+		epoch: 0
+	};
+}
+const $state: LocalState = defaultState();
 const _localState = writable<LocalState>($state);
 export const localState = {
 	get value() {
@@ -31,11 +35,18 @@ export const localState = {
 	},
 	subscribe: _localState.subscribe,
 	move(x: number, y: number) {
-		const player = get(onchainState).player;
+		const player = get(viewState).entities[wallet.address.toAddress()];
+		const epoch = localComputer.calculateEpochInfo(time.now());
 
 		if (!player) {
 			throw new Error(`no player`);
 		}
+
+		if (epoch.currentEpoch != $state.epoch) {
+			$state.actions = [];
+			$state.epoch = epoch.currentEpoch;
+		}
+
 		let currentPosition = player.position;
 		if ($state.actions.length > 0) {
 			for (const action of $state.actions) {
@@ -53,11 +64,18 @@ export const localState = {
 		_localState.set($state);
 	},
 	placeBomb() {
-		const player = get(onchainState).player;
+		const player = get(viewState).entities[wallet.address.toAddress()];
+		const epoch = localComputer.calculateEpochInfo(time.now());
 
 		if (!player) {
 			throw new Error(`no player`);
 		}
+
+		if (epoch.currentEpoch != $state.epoch) {
+			$state.actions = [];
+			$state.epoch = epoch.currentEpoch;
+		}
+
 		let currentPosition = player.position;
 		if ($state.actions.length > 0) {
 			for (const action of $state.actions) {
@@ -76,6 +94,14 @@ export const localState = {
 	async commit() {
 		const epochInfo = localComputer.calculateEpochInfo(time.now());
 		const { currentEpoch: epoch } = epochInfo;
+
+		if (epoch != $state.epoch) {
+			$state.actions = [];
+			$state.epoch = epoch;
+			_localState.set($state);
+			throw new Error(`too late`);
+		}
+
 		console.log(`commiting for epoch ${epoch}...`);
 
 		// TODO
@@ -98,6 +124,14 @@ export const localState = {
 	async reveal() {
 		const epochInfo = localComputer.calculateEpochInfo(time.now());
 		const { currentEpoch: epoch } = epochInfo;
+
+		if (epoch != $state.epoch) {
+			$state.actions = [];
+			$state.epoch = epoch;
+			_localState.set($state);
+			throw new Error(`too late`);
+		}
+
 		console.log(`revealing for epoch ${epoch}...`);
 
 		const commitment = $state.submission?.commit;

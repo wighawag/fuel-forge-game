@@ -1,19 +1,19 @@
 import type { Readable } from 'svelte/store';
 
-export type Entity = { id: string; position: { x: number; y: number } } & (
-	| {
-			type: 'player';
-			life: number;
-			epoch: number;
-	  }
-	| {
-			type: 'bomb';
-			explosion_start: number;
-			explosion_end: number;
-	  }
-);
+export type BaseEntity = { id: string; position: { x: number; y: number } };
+
+export type PlayerEntity = BaseEntity & {
+	type: 'player';
+	life: number;
+	epoch: number;
+};
+export type BombEntity = BaseEntity & {
+	type: 'bomb';
+	explosion_start: number;
+	explosion_end: number;
+};
+export type Entity = PlayerEntity | BombEntity;
 export type OnchainState = {
-	player?: Entity;
 	entities: { [id: string]: Entity };
 };
 

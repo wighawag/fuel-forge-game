@@ -22,10 +22,6 @@ export function createAutoSubmitter() {
 					// still time for player to setup its move
 				}
 			} else {
-				// TODO remove
-				if (epochInfo.timeLeftForRevealEnd > 7) {
-					return;
-				}
 				if (localData.submission && localData.submission.commit.epoch == epochInfo.currentEpoch) {
 					if (
 						!localData.submission.reveal ||

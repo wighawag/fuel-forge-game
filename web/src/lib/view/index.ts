@@ -1,49 +1,68 @@
-import { time } from '$lib/connection';
+import { time, wallet } from '$lib/connection';
 import { createDirectReadStore } from '$lib/onchain/direct-read';
-import type { OnchainState } from '$lib/onchain/types';
+import type {
+	BaseEntity,
+	BombEntity,
+	Entity,
+	OnchainState,
+	PlayerEntity
+} from '$lib/onchain/types';
 import { camera } from '$lib/render/camera';
 import { derived, get, writable } from 'svelte/store';
 import { localState } from './localState';
 
-export type ViewState = OnchainState;
+export type Position = { x: number; y: number };
+
+export type PlayerViewEntity = PlayerEntity & {
+	path?: Position[];
+};
+export type ViewEntity = PlayerViewEntity | BombEntity;
+export type ViewState = {
+	entities: { [id: string]: ViewEntity };
+};
 
 export const onchainState = createDirectReadStore(camera);
 
 export const viewState = derived(
 	[onchainState, localState],
-	([$onchainState, $localState]): OnchainState => {
-		const onchain_player = $onchainState.player;
-		const entities = { ...$onchainState.entities };
-		let player = onchain_player;
-		if (player && $localState.actions.length > 0) {
-			let current_position = player.position;
-			for (const action of $localState.actions) {
-				if (action.type === 'move') {
-					current_position = { x: action.x, y: action.y };
-				} else if (action.type == 'placeBomb') {
-					const bombID = `${current_position.x},${current_position.y}`;
-					entities[bombID] = {
-						type: 'bomb',
-						id: bombID,
-						position: current_position,
-						explosion_start: time.now() + 1,
-						explosion_end: time.now() + 1
-					};
+	([$onchainState, $localState]): ViewState => {
+		const playerID = wallet.address.toAddress();
+		const onchain_player = $onchainState.entities[playerID] as PlayerEntity | undefined;
+		const entities = { ...$onchainState.entities } as { [id: string]: ViewEntity };
+		if (onchain_player) {
+			let current_position = { ...onchain_player.position };
+			const path: Position[] = [];
+			if ($localState.actions.length > 0) {
+				for (const action of $localState.actions) {
+					path.push(current_position);
+					if (action.type === 'move') {
+						current_position = { x: action.x, y: action.y };
+					} else if (action.type == 'placeBomb') {
+						// TODO proper BombID
+						const bombID = `${current_position.x},${current_position.y}`;
+						entities[bombID] = {
+							type: 'bomb',
+							id: bombID,
+							position: current_position,
+							explosion_start: time.now() + 1,
+							explosion_end: time.now() + 1
+						};
+					}
 				}
 			}
-			player = {
-				...player,
-				position: current_position
+			entities[playerID] = {
+				...onchain_player,
+				position: current_position,
+				path
 			};
 
-			entities[player.id] = player;
+			return {
+				entities
+			};
 		}
 
-		// console.log(player);
-
 		return {
-			entities,
-			player
+			entities
 		};
 	}
 );

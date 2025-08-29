@@ -1,23 +1,25 @@
-import type { Entity, OnchainState } from '$lib/onchain/types';
 import { Blockie } from '$lib/utils/ethereum/blockie';
-import { viewState } from '$lib/view';
+import { viewState, type ViewEntity, type ViewState } from '$lib/view';
 import { BitmapText, Container, Graphics, Sprite } from 'pixi.js';
 import type { Readable } from 'svelte/store';
 import { LoadingSprite } from './LoadingSprite';
 import { localComputer, time, wallet } from '$lib/connection';
 import { LoadingBitmapText } from './LoadingBtimapText';
 
-export function createRenderer(viewState: Readable<OnchainState>) {
+export function createRenderer(viewState: Readable<ViewState>) {
 	let displayObjects: { [id: string]: Container } = {};
 	let unsubscribe: (() => void) | undefined = undefined;
 
 	function onAppStarted(container: Container) {
+		let pathDisplayObject = new Container();
+		container.addChild(pathDisplayObject);
+
 		unsubscribe = viewState.subscribe(($viewState) => {
 			const epochInfo = localComputer.calculateEpochInfo(time.now());
 			const { currentEpoch: epoch } = epochInfo;
 			const processed = new Set();
 
-			function onEntityAdded(id: string, entity: Entity): Container {
+			function onEntityAdded(id: string, entity: ViewEntity): Container {
 				const displayObject = new Container();
 				if (entity.type == 'player') {
 					const sprite = new LoadingSprite(Blockie.getURI(entity.id));
@@ -100,7 +102,7 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 				container.removeChild(displayObject);
 			}
 
-			function updateEntity(id: string, displayObject: Container, entity: Entity) {
+			function updateEntity(id: string, displayObject: Container, entity: ViewEntity) {
 				// TODO we could tween
 				displayObject.x = 10 * entity.position.x;
 				displayObject.y = 10 * entity.position.y;
@@ -118,6 +120,22 @@ export function createRenderer(viewState: Readable<OnchainState>) {
 					}
 
 					if (id == wallet.address.toAddress()) {
+						// TODO move that elseewhere and remove the need to delete all and reconstruct
+						// Make sure to destroy all children first to prevent memory leaks
+						pathDisplayObject.removeChildren();
+
+						const path = entity.path;
+						// TODO path.epoch
+						if (path) {
+							for (const pos of path) {
+								const graphics = new Graphics();
+								pathDisplayObject.addChild(graphics).rect(4, 4, 2, 2).fill(0x00ff00);
+								graphics.x = 10 * pos.x;
+								graphics.y = 10 * pos.y;
+							}
+							console.log(`after: ${pathDisplayObject.children.length}`);
+						}
+
 						if (entity.epoch > time.now() - 0.9) {
 							displayObject.children[1].visible = false;
 							displayObject.children[2].visible = true;

@@ -72,9 +72,6 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 						epoch: player.epoch.toNumber()
 					} as const;
 					state.entities[id] = entity;
-					if (id == wallet.address.toAddress()) {
-						state.player = entity;
-					}
 				} else if (bomb) {
 					const id = `${bomb.position.x},${bomb.position.y}`;
 					state.entities[id] = {
