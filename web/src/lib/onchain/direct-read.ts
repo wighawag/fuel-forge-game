@@ -1,6 +1,6 @@
 import { get, writable, type Readable } from 'svelte/store';
 import type { OnchainState } from './types';
-import { gameContract, provider, time, wallet } from '$lib/connection';
+import { gameContract, localComputer, provider, time, wallet } from '$lib/connection';
 import { calculateSurroundingZones } from 'fuel-forge-game-onchain';
 
 type Camera = {
@@ -46,7 +46,10 @@ export function createDirectReadStore(camera: Readable<Camera>): Readable<Onchai
 			y: Math.floor(camera.y) + (1 << 30)
 		});
 
-		const result = await gameContract.functions.get_zones(zones, time.now()).get();
+		const now = time.now();
+		const epochInfo = localComputer.calculateEpochInfo(now);
+
+		const result = await gameContract.functions.get_zones(zones, epochInfo.currentEpoch).get();
 		if (hasCameraChanged($camera, camera)) {
 			return;
 		}

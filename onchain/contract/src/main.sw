@@ -524,7 +524,7 @@ impl Game for Contract {
                             bomb_counter = bomb_counter + 1;
 
                             _add_bomb_to_zone(new_position, _calculate_zone(new_position));
-                            let explosion_start = epoch + 2 ; 
+                            let explosion_start = epoch + 2;
                             let explosion_end = explosion_start + 0;
                             storage.tiles.insert(
                                 new_position,
